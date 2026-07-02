@@ -164,11 +164,19 @@
       // both sides are actually present.
       const sep = (pill || bucketLabel) && (eye || cal) ? `<span class="pill-sep">|</span>` : "";
       const childHtml = opts.tree ? childrenOf(t.id).map(nodeHtml).join("") : "";
+      // In tree mode every node carries a drag handle and an (always-present, maybe
+      // empty) children container so it can be reordered or have tasks dropped into
+      // it to become subtasks. See app.dnd.js.
+      const handle = opts.tree
+        ? `<i class="grip lines vertical icon drag-handle" title="Drag to reorder or nest"></i>`
+        : "";
+      const children = opts.tree ? `<div class="todo-children" data-parent="${t.id}">${childHtml}</div>` : "";
       return `
-        <div class="todo-node">
+        <div class="todo-node" data-id="${t.id}">
           <div class="ui fluid card todo-card" data-id="${t.id}" style="${done ? "opacity:.65" : ""}">
             <div class="content">
               <div class="todo-row">
+                ${handle}
                 <input type="checkbox" class="todo-check" data-id="${t.id}" ${done ? "checked" : ""} title="Mark done" />
                 <div class="todo-main">
                   <div class="header" style="${done ? "text-decoration:line-through" : ""}">${bell}${esc(t.title)}</div>
@@ -177,7 +185,7 @@
               </div>
             </div>
           </div>
-          ${childHtml ? `<div class="todo-children">${childHtml}</div>` : ""}
+          ${children}
         </div>`;
     }
 
@@ -214,10 +222,16 @@
     $("#todo-list .todo-card").on("click", function () {
       App.openTodo($(this).data("id"));
     });
+    // A plain click on the drag handle must not open the detail pane.
+    $("#todo-list .drag-handle").on("click", (e) => e.stopPropagation());
     // Keep the open task highlighted across re-renders.
     if (state.currentTodoId) {
       $(`#todo-list .todo-card[data-id="${state.currentTodoId}"]`).addClass("selected");
     }
+
+    // Enable (or tear down) drag-to-reorder / drag-to-nest. Only meaningful in the
+    // hierarchical tree view — search results are a flat, filter-agnostic list.
+    if (App.initTaskDnd) App.initTaskDnd(opts.tree && !searching);
   }
 
   // ===================== Buckets =====================

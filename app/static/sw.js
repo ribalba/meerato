@@ -14,7 +14,7 @@
  *
  * Bump VERSION whenever the precache list changes to evict old caches.
  */
-const VERSION = "todo-v34";
+const VERSION = "todo-v35";
 
 // Same-origin shell: small and local, so precaching these is fast and safe to
 // block install on.
@@ -35,6 +35,7 @@ const LOCAL_SHELL = [
   "/static/js/app.shell.js",
   "/static/js/app.quickadd.js",
   "/static/js/app.list.js",
+  "/static/js/app.dnd.js",
   "/static/js/app.detail.js",
   "/static/js/app.watching.js",
   "/static/js/app.automation.js",
@@ -51,6 +52,7 @@ const CDN_SHELL = [
   "https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js",
   "https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js",
   "https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js",
+  "https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js",
 ];
 
 self.addEventListener("install", (event) => {

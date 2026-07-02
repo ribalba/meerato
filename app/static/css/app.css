@@ -604,6 +604,39 @@ body.resizing { cursor: col-resize; user-select: none; }
   border-left: 2px solid #e6e6e6;
 }
 
+/* ---- Drag & drop (see app.dnd.js) ---- */
+/* Grab handle: a quiet move icon that appears on card hover so it never competes
+   with the title. It sits at the front of the .todo-row flex line. */
+.drag-handle {
+  flex: 0 0 auto;
+  /* Negative side margins pull the handle tight against the card edge and the
+     checkbox, trimming the .6rem flex gap on either side. */
+  margin: .15rem -.35rem 0 -.4rem !important;
+  color: #c2ccd4;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+.todo-card:hover .drag-handle,
+.dnd-active .drag-handle { opacity: 1; }
+.drag-handle:active { cursor: grabbing; }
+
+/* The item left behind under the cursor while dragging. */
+.todo-drag-ghost { opacity: .35; }
+.todo-drag-ghost .todo-card { outline: 2px dashed #2185d0; outline-offset: -1px; }
+
+/* While a drag is in progress, reveal empty indent zones so a task can be dropped
+   into one to become a subtask. */
+.dnd-active .todo-children:empty {
+  min-height: 1.5rem;
+  margin: .05rem 0 .4rem 1.1rem;
+  padding-left: .6rem;
+  border: 1px dashed #c9d6df;
+  border-left-width: 2px;
+  border-radius: 5px;
+  background: rgba(33, 133, 208, .04);
+}
+
 .subtodo-item { padding: .4rem .2rem; border-bottom: 1px solid #f0f0f0; }
 .subtodo-item:last-child { border-bottom: none; }
 
