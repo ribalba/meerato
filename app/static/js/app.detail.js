@@ -106,11 +106,11 @@
                   }).join("")}
                 </div>
               </div>`}
-          <button class="ui basic icon button" id="d-watchers-btn"
+          <button class="ui basic icon button${watchers.length ? " is-set" : ""}" id="d-watchers-btn"
                   title="Watchers${watchers.length ? ` (${watchers.length})` : ""}">
             <i class="eye icon"></i>
           </button>
-          <button class="ui basic icon button" id="d-schedule-btn" title="Schedule a status change" ${online ? "" : "disabled"}>
+          <button class="ui basic icon button${todo.has_schedule ? " is-set" : ""}" id="d-schedule-btn" title="Schedule a status change" ${online ? "" : "disabled"}>
             <i class="calendar alternate outline icon"></i>
           </button>
           <button class="ui basic ${shareReady ? "" : "disabled"} icon button" id="d-share" title="Copy share link">
@@ -435,15 +435,16 @@
       $("#d-comment-file-name").text(this.files[0] ? this.files[0].name : "");
     });
 
-    // Comment (+ optional file)
+    // Comment (+ optional file). A file on its own is a valid post — the comment
+    // body may be empty when someone only wants to attach a file.
     $("#d-add-comment").on("click", async () => {
       const body = $("#d-comment").val().trim();
-      if (!body) return;
+      const file = $("#d-comment-file")[0].files[0];
+      if (!body && !file) return;
       const commentId = Sync.uuid();
       // Include actor_email locally so my own comment isn't flagged as "unread".
       await Sync.mutate("comment", "create", commentId, { todo_id: id, body, actor_email: state.user.email });
       $("#d-comment").val("");
-      const file = $("#d-comment-file")[0].files[0];
       if (file && navigator.onLine) {
         try {
           await Sync.flush(); // ensure the event exists server-side first
@@ -566,6 +567,7 @@
         try {
           await API.del(`/api/todos/${id}/schedules/${$(this).data("id")}`);
           await loadSchedules(id);
+          await Sync.pull(); // refresh has_schedule so the button highlight clears
         } catch (e) { toast(errText(e), "error"); }
       });
     } catch (e) {

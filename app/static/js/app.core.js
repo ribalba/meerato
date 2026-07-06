@@ -68,7 +68,7 @@
     currentTodoId: null,
     currentWatchToken: null, // set when the open detail is a read-only watched task
     watching: false, // sidebar "Watching" view active (tasks shared with me)
-    panel: null, // main-pane panel: null | 'automation' | 'api'
+    panel: null, // main-pane panel: null | 'analytics' | 'automation' | 'api' | 'settings'
     watchersOpen: false, // detail pane: is the watchers panel expanded
     scheduleOpen: false, // detail pane: is the schedule panel expanded
     showArchived: false, // sidebar: reveal archived buckets

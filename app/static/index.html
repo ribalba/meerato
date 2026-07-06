@@ -360,6 +360,7 @@
             <div class="rail-section-label">Workspace</div>
             <div class="ui vertical fluid menu rail-menu">
               <a class="item" id="watching-btn"><i class="eye icon"></i> Watching</a>
+              <a class="item" id="analytics-btn"><i class="chart bar icon"></i> Analytics</a>
               <a class="item" id="automation-btn"><i class="robot icon"></i> Automation</a>
               <a class="item" id="api-btn"><i class="code icon"></i> API</a>
             </div>
@@ -402,6 +403,24 @@
         <div id="empty-state" class="ui placeholder segment" style="display:none">
           <img id="empty-state-img" src="/static/img/meerkat-no-tasks.png" alt="" style="display:none" />
           <div class="ui icon header"><i class="check circle outline icon"></i> All done for today. Whoooo!</div>
+        </div>
+
+        <!-- ===== Analytics panel ===== -->
+        <div id="analytics-panel" class="main-panel" style="display:none">
+          <h3 class="ui header"><i class="chart bar icon"></i>
+            <div class="content">Analytics</div>
+          </h3>
+          <p style="color:#888">
+            Your throughput over a rolling window: how many tasks you created and
+            completed, and how long finished tasks spent in the <em>Now</em> status.
+            All figures are computed on this device from your own tasks.
+          </p>
+          <div class="ui secondary pointing menu analytics-periods" id="analytics-periods">
+            <a class="item active" data-period="7">Last week</a>
+            <a class="item" data-period="30">Last month</a>
+            <a class="item" data-period="365">Last year</a>
+          </div>
+          <div id="analytics-body"></div>
         </div>
 
         <!-- ===== Automation panel (recurring tasks) ===== -->
@@ -892,6 +911,7 @@
   <script src="/static/js/app.watching.js"></script>
   <script src="/static/js/app.automation.js"></script>
   <script src="/static/js/app.apipage.js"></script>
+  <script src="/static/js/app.analytics.js"></script>
   <script src="/static/js/app.boot.js"></script>
   <script defer src="https://umami.meerato.com/script.js" data-website-id="49da1427-466e-4b74-8afa-afdb49cb0006"></script>
 </body>

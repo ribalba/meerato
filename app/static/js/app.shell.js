@@ -283,6 +283,12 @@
     // Watching (tasks shared with me): a main-pane view, like the status filters.
     $("#watching-btn").on("click", enterWatching);
 
+    // Analytics (throughput stats): a main-pane panel, like the API view.
+    $("#analytics-btn").on("click", () => App.showAnalytics());
+    $("#analytics-periods").on("click", ".item", function () {
+      App.setAnalyticsPeriod($(this).data("period"));
+    });
+
     // Custom statuses (managed in the Settings panel).
     $("#cs-add").on("click", addCustomStatus);
     $("#cs-label, #cs-icon").on("keydown", (e) => {
@@ -414,11 +420,13 @@
     state.panel = name;
     App.closeDetail();
     $("#quick-add, #search-bar, #todo-list, #empty-state").hide();
+    $("#analytics-panel").toggle(name === "analytics");
     $("#automation-panel").toggle(name === "automation");
     $("#api-panel").toggle(name === "api");
     $("#settings-panel").toggle(name === "settings");
     // The panel buttons own the "active" highlight while a panel is open.
     $("#views-menu .status-link, #watching-btn").removeClass("active");
+    $("#analytics-btn").toggleClass("active", name === "analytics");
     $("#automation-btn").toggleClass("active", name === "automation");
     $("#api-btn").toggleClass("active", name === "api");
     $("#settings-btn").toggleClass("active", name === "settings");
@@ -429,9 +437,9 @@
   function exitMainPanel() {
     if (!state.panel) return;
     state.panel = null;
-    $("#automation-panel, #api-panel, #settings-panel").hide();
+    $("#analytics-panel, #automation-panel, #api-panel, #settings-panel").hide();
     $("#quick-add, #todo-list").show();
-    $("#automation-btn, #api-btn, #settings-btn").removeClass("active");
+    $("#analytics-btn, #automation-btn, #api-btn, #settings-btn").removeClass("active");
   }
 
   // ===================== Search =====================

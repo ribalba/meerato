@@ -8,6 +8,19 @@
   <link rel="icon" href="/static/logo-192.png" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
   <link rel="stylesheet" href="/static/css/app.css" />
+  <style>
+    /* The CTA email field is a Fomantic "action input" whose <input> defaults
+       to flex-shrink:0, so on narrow phones it plus the button push past the
+       viewport. Let it shrink to fit, and stack the button below on tiny
+       screens so the invite box always scales with the content. */
+    #cta-form .ui.action.input > input { min-width: 0; flex-shrink: 1; }
+    @media (max-width: 420px) {
+      #cta-form .ui.action.input { flex-direction: column; }
+      #cta-form .ui.action.input > input,
+      #cta-form .ui.action.input > .button { width: 100%; border-radius: .28571429rem !important; }
+      #cta-form .ui.action.input > input { margin-bottom: .5rem; }
+    }
+  </style>
 </head>
 <body style="background:#f4f5f7">
   <div class="ui container" style="max-width:760px !important; padding:2rem 1rem 4rem">
