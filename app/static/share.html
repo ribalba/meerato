@@ -9,6 +9,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
   <link rel="stylesheet" href="/static/css/app.css" />
   <style>
+    /* app.css locks html/body to height:100%;overflow:hidden for the SPA shell
+       (index.html), which has its own inner scroll areas. This is a plain
+       document-flow page, so restore normal scrolling — otherwise content
+       taller than the viewport is clipped and can't scroll on mobile. */
+    html, body { height: auto; overflow: visible; }
+
     /* The CTA email field is a Fomantic "action input" whose <input> defaults
        to flex-shrink:0, so on narrow phones it plus the button push past the
        viewport. Let it shrink to fit, and stack the button below on tiny
