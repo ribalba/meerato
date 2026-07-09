@@ -252,6 +252,7 @@
     $("#sync-now").on("click", () => Sync.flush().then(() => toast("Synced")));
     $("#settings-btn").on("click", showSettings);
     $("#settings-back").on("click", hideSettings);
+    $("#reload-app").on("click", reloadApp);
     $("#notif-btn").on("click", openNotifList);
     $("#settings-terms-link").on("click", () => $("#terms-modal").modal("show"));
     $("#notif-clear").on("click", async () => {
@@ -547,6 +548,28 @@
   async function hideSettings() {
     exitMainPanel();
     await App.renderAll(); // restore the task list + reflect any new order/statuses
+  }
+
+  // Force a fresh download of the app shell/assets. The service worker caches
+  // our JS/CSS (and CDN libs), and normally only evicts them when sw.js bumps
+  // VERSION — so code changes shipped without a bump can keep serving stale.
+  // Clearing the caches and unregistering the worker, then reloading, makes the
+  // browser re-fetch everything from the network (the worker re-precaches on the
+  // next load). Local task data lives in IndexedDB and is left untouched.
+  async function reloadApp() {
+    $("#reload-app").addClass("loading disabled");
+    try { await Sync.flush(); } catch (e) { /* push pending changes first */ }
+    try {
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (e) { /* best effort — reload regardless */ }
+    location.reload();
   }
 
   // ---- Custom statuses (Settings panel) ----
