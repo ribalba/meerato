@@ -90,6 +90,47 @@ class LoginToken(Base):
     redirect_todo_id: Mapped[str | None] = mapped_column(String(36))
 
 
+class LoginCode(Base):
+    """Short alphanumeric sign-in code, emailed alongside the magic link.
+
+    The link cannot always complete sign-in: a ``meerato://`` deep link only reaches
+    the desktop app if the OS has the protocol handler registered, which is not a
+    given on Linux. Typing the code into the app window always works.
+
+    Kept in its own table rather than as columns on LoginToken because the deploy
+    story is ``create_all``-only (see database.init_db): a new table appears on an
+    existing database, new columns would not.
+
+    One live code per email — requesting another replaces it. Only the HMAC of the
+    code is stored, and the row is deleted on first successful use or after
+    ``login_code_max_attempts`` wrong guesses. That attempt budget, rather than the
+    length, is what keeps a 6-character secret out of reach of a guessing attack.
+    """
+
+    __tablename__ = "login_codes"
+
+    email: Mapped[str] = mapped_column(String(320), primary_key=True)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class RateLimit(Base):
+    """Fixed-window request counter — one row per ``(action:subject)`` key — used to
+    throttle the sign-in endpoints (code issuance and code submission, keyed by email).
+
+    Its own table for the same ``create_all``-only deploy reason as LoginCode. Rows are
+    reused per key and never grow in number faster than distinct emails seen; like
+    login_tokens they are not garbage-collected, which is fine at this scale.
+    """
+
+    __tablename__ = "rate_limits"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
 class Session(Base):
     __tablename__ = "sessions"
 

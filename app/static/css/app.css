@@ -858,6 +858,40 @@ body.resizing { cursor: col-resize; user-select: none; }
 .landing-login .ui.input input:focus {
   border-color: #2185d0 !important;
 }
+.landing-login #login-code {
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 1.5rem !important;
+  font-weight: 600;
+  letter-spacing: .35em;
+  /* The trailing letter-spacing pushes the text off-centre; claw half of it back. */
+  text-indent: .35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  /* Semantic UI paints `input:invalid` red, which an empty `required` box always is.
+     Suppress it: the box is only wrong once the server has rejected a code. */
+  background: #fff !important;
+  border-color: #d0d7de !important;
+  color: #1f2328 !important;
+  box-shadow: none !important;
+}
+.landing-login #login-code:focus { border-color: #2185d0 !important; }
+.landing-code-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: .8rem;
+}
+.landing-code-actions .linkish {
+  background: none;
+  border: none;
+  padding: .2rem;
+  color: #57606a;
+  font: inherit;
+  font-size: .9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.landing-code-actions .linkish:disabled { opacity: .6; cursor: default; }
 .landing-login-note {
   text-align: center;
   color: #6e7781;

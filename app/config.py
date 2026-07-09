@@ -25,9 +25,20 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "uploads"
     max_upload_bytes: int = 25 * 1024 * 1024  # 25 MB per file
 
-    # Auth token lifetimes (minutes).
+    # Auth token lifetimes (minutes). The emailed sign-in code shares the login TTL.
     login_token_ttl_minutes: int = 30
     session_ttl_minutes: int = 60 * 24 * 30  # 30 days
+
+    # Wrong guesses before an emailed sign-in code is destroyed.
+    login_code_max_attempts: int = 5
+
+    # Sign-in rate limits, per email, over a rolling window. Issuing codes is the main
+    # brute-force lever (each new code resets the guess cap above), so it is capped
+    # tightest; this also stops using the endpoint to email-bomb someone. Submitting
+    # codes is capped more loosely as defence-in-depth on top of the per-code cap.
+    login_rate_max: int = 5           # code requests per window per email
+    verify_rate_max: int = 15         # code submissions per window per email
+    login_rate_window_minutes: int = 15
 
     # SMTP. If smtp_host is empty, emails are printed to the console instead of sent.
     smtp_host: str = ""

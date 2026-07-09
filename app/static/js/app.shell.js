@@ -62,36 +62,86 @@
     hideLoader();
     $("#app").hide();
     $("#login").show();
+
+    // The email the code was last sent to. Both the landing form and the compact
+    // header form feed the one code box in the landing login section.
+    let codeEmail = "";
+
+    function loginMessage(html, kind) {
+      $("#login-message")
+        .removeClass("hidden positive negative")
+        .addClass("visible " + (kind === "error" ? "negative" : "positive"))
+        .html(html);
+    }
+
+    // Reveal the code box for `email`. Issuing a code invalidates the previous one,
+    // so this doubles as the way out of an expired code or the too-many-guesses lockout.
+    async function requestCode(email) {
+      await API.post("/api/auth/login", { email, client: IS_DESKTOP ? "desktop" : undefined });
+      codeEmail = email;
+      $("#code-sent-to").text(email);
+      $("#login-form").hide();
+      $("#code-form").show();
+      $("#login-code").val("").trigger("focus");
+    }
+
     $("#login-form").on("submit", async (e) => {
       e.preventDefault();
       const email = $("#login-email").val().trim();
       if (!email) return;
       try {
-        const r = await API.post("/api/auth/login", { email, client: IS_DESKTOP ? "desktop" : undefined });
-        $("#login-message")
-          .removeClass("hidden negative")
-          .addClass("positive visible")
-          .html("<i class='check icon'></i>" + esc(r.message));
+        await requestCode(email);
+        loginMessage("<i class='check icon'></i> Check your email for a sign-in link and code.");
       } catch (err) {
-        $("#login-message")
-          .removeClass("hidden positive")
-          .addClass("negative visible")
-          .text(err.detail || "Something went wrong.");
+        loginMessage(esc(err.detail || "Something went wrong."), "error");
       }
     });
 
-    // Compact header login: same magic-link flow, result shown as a toast.
+    // Compact header login: same flow, but scroll the user down to the code box.
     $("#nav-login-form").on("submit", async (e) => {
       e.preventDefault();
       const email = $("#nav-login-email").val().trim();
       if (!email) return;
       try {
-        const r = await API.post("/api/auth/login", { email, client: IS_DESKTOP ? "desktop" : undefined });
+        await requestCode(email);
         $("#nav-login-email").val("");
-        toast("<i class='check icon'></i>" + esc(r.message), "success");
+        document.querySelector(".landing-login-section")
+          .scrollIntoView({ behavior: "smooth", block: "center" });
+        toast("<i class='check icon'></i> Check your email for a sign-in link and code.", "success");
       } catch (err) {
         toast(err.detail || "Something went wrong.", "error");
       }
+    });
+
+    $("#code-form").on("submit", async (e) => {
+      e.preventDefault();
+      const code = $("#login-code").val().trim();
+      if (!code) return;
+      try {
+        const r = await API.post("/api/auth/verify-code", { email: codeEmail, code });
+        // Reload rather than calling showApp(): boot() re-fetches /api/auth/me and
+        // runs the same-account check that swaps out any stale local mirror.
+        location.replace(r.redirect || "/");
+      } catch (err) {
+        loginMessage(esc(err.detail || "Something went wrong."), "error");
+        $("#login-code").trigger("select");
+      }
+    });
+
+    $("#resend-code").on("click", async () => {
+      try {
+        await requestCode(codeEmail);
+        loginMessage("<i class='check icon'></i> New code sent. Check your email.");
+      } catch (err) {
+        loginMessage(esc(err.detail || "Something went wrong."), "error");
+      }
+    });
+
+    $("#use-other-email").on("click", () => {
+      $("#code-form").hide();
+      $("#login-form").show();
+      $("#login-message").removeClass("visible positive negative").addClass("hidden");
+      $("#login-email").val(codeEmail).trigger("focus");
     });
   }
 

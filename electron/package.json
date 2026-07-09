@@ -4,7 +4,12 @@
   "version": "0.0.1",
   "description": "Desktop wrapper for the Meerato to-do app.",
   "main": "main.js",
-  "author": "Meerato",
+  "desktopName": "meerato.desktop",
+  "homepage": "https://github.com/ribalba/meerkat",
+  "author": {
+    "name": "Didi Hoffmann",
+    "email": "didi@ribalba.de"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -32,7 +37,9 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Office"
+      "category": "Office",
+      "synopsis": "Desktop wrapper for the Meerato to-do app.",
+      "syncDesktopName": true
     }
   }
 }

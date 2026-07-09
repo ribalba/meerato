@@ -7,12 +7,16 @@ from sqlalchemy.orm import Session as DBSession
 from ..config import get_settings
 from ..database import get_db
 from ..emailer import send_login_link
-from ..schemas import LoginRequest, ProfileUpdate, UserOut
+from ..schemas import LoginRequest, ProfileUpdate, UserOut, VerifyCodeRequest
 from ..security import (
     SESSION_COOKIE,
+    consume_login_code,
     consume_login_token,
+    create_login_code,
     create_login_token,
     create_session,
+    enforce_login_rate,
+    enforce_verify_rate,
     get_current_user,
     new_api_token,
 )
@@ -21,21 +25,52 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
 
 
+def _set_session_cookie(response: Response, session_token: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_token,
+        max_age=settings.session_ttl_minutes * 60,
+        httponly=True,
+        samesite="lax",
+        secure=settings.base_url.startswith("https"),
+    )
+
+
 @router.post("/login")
 def request_login(payload: LoginRequest, db: DBSession = Depends(get_db)) -> dict:
-    """Send a one-time magic sign-in link to the given email.
+    """Email a magic sign-in link and a short sign-in code for the same account.
 
-    The desktop (Electron) app sends ``client="desktop"`` so the link is a
-    ``meerato://`` deep link that completes sign-in inside the app window rather
-    than the user's web browser (where the session cookie would otherwise land).
+    Two ways in, because the link alone isn't always enough. The desktop (Electron)
+    app sends ``client="desktop"`` so the link is a ``meerato://`` deep link that
+    completes sign-in inside the app window rather than the user's web browser (where
+    the session cookie would otherwise land) — but that hands off through the OS, and
+    on Linux nothing may have claimed the scheme. The code, typed into the window the
+    user already has open, always works. See ``verify_login_code``.
     """
+    enforce_login_rate(db, payload.email)
     token = create_login_token(db, payload.email)
+    code = create_login_code(db, payload.email)
     if payload.client == "desktop":
         link = f"meerato://login?token={token}"
     else:
         link = f"{settings.base_url}/api/auth/callback?token={token}"
-    send_login_link(payload.email, link)
-    return {"ok": True, "message": "Check your email for a sign-in link."}
+    send_login_link(payload.email, link, code)
+    return {"ok": True, "message": "Check your email for a sign-in link and code."}
+
+
+@router.post("/verify-code")
+def verify_login_code(
+    payload: VerifyCodeRequest, response: Response, db: DBSession = Depends(get_db)
+) -> dict:
+    """Consume an emailed sign-in code and establish a session cookie.
+
+    The link's equivalent (``login_callback``) redirects; this returns the target so
+    the sign-in page can navigate itself, keeping the whole exchange same-origin fetch.
+    """
+    enforce_verify_rate(db, payload.email)
+    user = consume_login_code(db, payload.email, payload.code)
+    _set_session_cookie(response, create_session(db, user))
+    return {"ok": True, "redirect": "/"}
 
 
 @router.get("/callback")
@@ -48,14 +83,7 @@ def login_callback(token: str, db: DBSession = Depends(get_db)) -> Response:
     if redirect_todo_id:
         target = f"/?todo={redirect_todo_id}"
     resp = RedirectResponse(url=target, status_code=302)
-    resp.set_cookie(
-        SESSION_COOKIE,
-        session_token,
-        max_age=settings.session_ttl_minutes * 60,
-        httponly=True,
-        samesite="lax",
-        secure=settings.base_url.startswith("https"),
-    )
+    _set_session_cookie(resp, session_token)
     return resp
 
 

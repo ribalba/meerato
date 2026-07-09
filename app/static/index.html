@@ -226,12 +226,28 @@
               </div>
             </div>
             <button class="ui fluid large primary submit button" type="submit">
-              Email me a sign-in link
+              Email me a sign-in code
             </button>
-            <div class="ui hidden message" id="login-message"></div>
           </form>
+
+          <!-- Revealed once the email is sent: the code, for when the link can't sign you in. -->
+          <form id="code-form" class="ui large form" style="display:none">
+            <div class="field">
+              <label>Enter the code we emailed to <strong id="code-sent-to"></strong></label>
+              <!-- Placeholder avoids 0/1/I/L/O: they aren't in the code alphabet (see security.py). -->
+              <input id="login-code" placeholder="K7QW4N" inputmode="text" autocomplete="one-time-code"
+                     autocapitalize="characters" spellcheck="false" maxlength="6" required />
+            </div>
+            <button class="ui fluid large primary submit button" type="submit">Sign in</button>
+            <div class="landing-code-actions">
+              <button class="linkish" type="button" id="resend-code">Send a new code</button>
+              <button class="linkish" type="button" id="use-other-email">Use a different email</button>
+            </div>
+          </form>
+
+          <div class="ui hidden message" id="login-message"></div>
           <p class="landing-login-note">
-            <i class="lock icon"></i> No password needed. We email you a magic link.
+            <i class="lock icon"></i> No password needed. We email you a magic link and a code.
           </p>
         </div>
       </section>

@@ -17,6 +17,15 @@ class MagicLinkConsume(BaseModel):
     token: str
 
 
+class VerifyCodeRequest(BaseModel):
+    """Sign in with the code from the email rather than by clicking the link."""
+
+    email: EmailStr
+    # Six characters, but the bound is loose so pasted spacing/dashes reach the
+    # normalizer in security._normalize_login_code instead of tripping validation.
+    code: str = Field(min_length=6, max_length=16)
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str

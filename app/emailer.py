@@ -62,17 +62,27 @@ def _print_to_console(to: str, subject: str, body: str) -> None:
     )
 
 
-def send_login_link(to: str, link: str) -> None:
+def send_login_link(to: str, link: str, code: str) -> None:
+    """Email both ways to sign in: the magic link, and the code to type in by hand.
+
+    The code is the fallback for when the link can't do the job — most often the
+    desktop app on Linux, where nothing has claimed the ``meerato://`` scheme.
+    """
     send_email(
         to,
         "Your sign-in link",
         f"""
         Hi,
 
-        Click the link below to sign in to {APP_NAME}. It expires in
-        {settings.login_token_ttl_minutes} minutes and can only be used once.
+        Click the link below to sign in to {APP_NAME}:
 
         {link}
+
+        Or enter this code on the sign-in screen:
+
+            {code}
+
+        Both expire in {settings.login_token_ttl_minutes} minutes.
 
         If you didn't request this, you can ignore this email.
         """,

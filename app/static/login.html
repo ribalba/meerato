@@ -23,54 +23,125 @@
     h1 { font-size: 1.4rem; margin: 0 0 .35rem; }
     .lede { color: #57606a; margin: 0 0 1.6rem; font-size: .95rem; }
     form { display: flex; flex-direction: column; gap: .8rem; }
-    input[type="email"] {
+    input {
       font: inherit; padding: .75rem .9rem; border: 1px solid #d0d7de; border-radius: 8px;
       outline: none; transition: border-color .15s ease;
     }
-    input[type="email"]:focus { border-color: var(--brand); }
+    input:focus { border-color: var(--brand); }
+    #login-code {
+      text-align: center; text-transform: uppercase;
+      font-size: 1.5rem; font-weight: 600; letter-spacing: .35em;
+      /* The trailing letter-spacing pushes the text off-centre; claw half of it back. */
+      text-indent: .35em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
     button {
       font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px;
       padding: .8rem 1rem; background: var(--brand); color: #fff; transition: opacity .15s ease;
     }
     button:disabled { opacity: .6; cursor: default; }
+    .actions { display: flex; justify-content: center; gap: 1rem; margin-top: .2rem; }
+    .linkish {
+      background: none; border: none; color: #57606a; font: inherit; font-weight: 400;
+      font-size: .85rem; text-decoration: underline; cursor: pointer; padding: .2rem;
+    }
+    .linkish:disabled { opacity: .6; cursor: default; }
     .message { margin-top: 1rem; font-size: .9rem; min-height: 1.2em; }
     .message.error { color: #d4351c; }
     .message.success { color: #1a7f37; }
     .note { color: #8b949e; font-size: .8rem; margin-top: 1.4rem; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <div class="card">
     <img class="logo" src="/static/logo-192.png" alt="Meerato" />
-    <h1>Sign in to Meerato</h1>
-    <p class="lede">No password needed. We'll email you a magic sign-in link.</p>
-    <form id="login-form">
-      <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required autofocus />
-      <button type="submit" id="login-submit">Email me a sign-in link</button>
-    </form>
+
+    <!-- Step 1: ask for the email. -->
+    <div id="step-email">
+      <h1>Sign in to Meerato</h1>
+      <p class="lede">No password needed. We'll email you a sign-in link and a code.</p>
+      <form id="login-form">
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required autofocus />
+        <button type="submit" id="login-submit">Email me a sign-in code</button>
+      </form>
+    </div>
+
+    <!-- Step 2: the code, for when the emailed link can't open this app. -->
+    <div id="step-code" hidden>
+      <h1>Enter your code</h1>
+      <p class="lede">We emailed a link and a 6-character code to <strong id="sent-to"></strong>.</p>
+      <form id="code-form">
+        <!-- Placeholder avoids 0/1/I/L/O: they aren't in the code alphabet (see security.py). -->
+        <input id="login-code" placeholder="K7QW4N" inputmode="text" autocomplete="one-time-code"
+               autocapitalize="characters" spellcheck="false" maxlength="6" required />
+        <button type="submit" id="code-submit">Sign in</button>
+      </form>
+      <div class="actions">
+        <button type="button" class="linkish" id="resend-code">Send a new code</button>
+        <button type="button" class="linkish" id="use-other-email">Use a different email</button>
+      </div>
+    </div>
+
     <div class="message" id="login-message" role="status" aria-live="polite"></div>
-    <p class="note">🔒 The link signs you in here, on this device.</p>
+    <p class="note" id="login-note">🔒 The link signs you in here, on this device.</p>
   </div>
 
   <script>
     // Running inside the Electron desktop shell? Then magic-link sign-in needs a
     // meerato:// deep link so the session lands in the app, not the system browser.
+    // That deep link is also the one most likely to go nowhere (no registered
+    // protocol handler), which is what the code in step 2 is here to rescue.
     const IS_DESKTOP = /Electron/i.test(navigator.userAgent);
 
+    const stepEmail = document.getElementById("step-email");
+    const stepCode = document.getElementById("step-code");
     const form = document.getElementById("login-form");
     const emailInput = document.getElementById("login-email");
     const submitBtn = document.getElementById("login-submit");
+    const codeForm = document.getElementById("code-form");
+    const codeInput = document.getElementById("login-code");
+    const codeSubmit = document.getElementById("code-submit");
+    const sentTo = document.getElementById("sent-to");
+    const resendBtn = document.getElementById("resend-code");
+    const otherEmail = document.getElementById("use-other-email");
     const message = document.getElementById("login-message");
+    const note = document.getElementById("login-note");
 
     function setMessage(text, kind) {
       message.textContent = text;
       message.className = "message" + (kind ? " " + kind : "");
     }
 
+    async function postJson(url, body) {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.detail || "Something went wrong. Please try again.");
+      return data;
+    }
+
     // Already signed in? Skip the form and go straight into the app.
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((r) => { if (r.ok) location.replace("/"); })
       .catch(() => {});
+
+    // Ask the server to email a fresh link + code. Issuing a new code invalidates the
+    // previous one, so this doubles as the escape hatch from an expired code or from
+    // the lockout that follows too many wrong guesses.
+    async function requestCode(email) {
+      await postJson("/api/auth/login", { email, client: IS_DESKTOP ? "desktop" : undefined });
+      sentTo.textContent = email;
+      stepEmail.hidden = true;
+      stepCode.hidden = false;
+      note.textContent = "🔒 The code expires in 30 minutes and signs you in on this device.";
+      codeForm.reset();
+      codeInput.focus();
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -79,21 +150,54 @@
       submitBtn.disabled = true;
       setMessage("Sending…");
       try {
-        const resp = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ email, client: IS_DESKTOP ? "desktop" : undefined }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.detail || "Something went wrong. Please try again.");
-        setMessage(data.message || "Check your email for a sign-in link.", "success");
-        form.reset();
+        await requestCode(email);
+        setMessage("");
       } catch (err) {
-        setMessage(err.message || "Something went wrong. Please try again.", "error");
+        setMessage(err.message, "error");
       } finally {
         submitBtn.disabled = false;
       }
+    });
+
+    resendBtn.addEventListener("click", async () => {
+      resendBtn.disabled = true;
+      setMessage("Sending…");
+      try {
+        await requestCode(emailInput.value.trim());
+        setMessage("New code sent. Check your email.", "success");
+      } catch (err) {
+        setMessage(err.message, "error");
+      } finally {
+        resendBtn.disabled = false;
+      }
+    });
+
+    codeForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = codeInput.value.trim();
+      if (!code) return;
+      codeSubmit.disabled = true;
+      setMessage("Checking…");
+      try {
+        // The email is read back from step 1's input, which we only hid, never cleared.
+        const data = await postJson("/api/auth/verify-code", { email: emailInput.value.trim(), code });
+        setMessage("Signed in. One moment…", "success");
+        location.replace(data.redirect || "/");
+      } catch (err) {
+        setMessage(err.message, "error");
+        codeInput.select();
+      } finally {
+        codeSubmit.disabled = false;
+      }
+    });
+
+    otherEmail.addEventListener("click", () => {
+      codeForm.reset();
+      stepCode.hidden = true;
+      stepEmail.hidden = false;
+      note.textContent = "🔒 The link signs you in here, on this device.";
+      setMessage("");
+      emailInput.focus();
     });
   </script>
   <script defer src="https://umami.meerato.com/script.js" data-website-id="49da1427-466e-4b74-8afa-afdb49cb0006"></script>

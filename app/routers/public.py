@@ -7,7 +7,7 @@ from ..database import get_db
 from ..emailer import send_access_link
 from ..models import Attachment, Event, EventType, Todo
 from ..schemas import AttachmentOut, EventOut, RequestAccess, TodoOut
-from ..security import create_login_token, get_current_user, new_id
+from ..security import create_login_token, enforce_login_rate, get_current_user, new_id
 from ..services import (
     attach_to_event,
     attach_to_events,
@@ -88,6 +88,10 @@ def request_access(token: str, payload: RequestAccess, db: DBSession = Depends(g
     sign in) and email them a one-time magic link scoped to the task.
     """
     todo = get_public_todo(db, token)
+
+    # Shares the per-email code-issuance budget with /api/auth/login: this path also
+    # emails a sign-in link to an arbitrary address, so it is the same email-bomb vector.
+    enforce_login_rate(db, payload.email)
 
     ensure_watcher(db, todo, payload.email)
     db.commit()
