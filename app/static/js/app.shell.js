@@ -143,6 +143,23 @@
       $("#login-message").removeClass("visible positive negative").addClass("hidden");
       $("#login-email").val(codeEmail).trigger("focus");
     });
+
+    // A darker-than-default dimmer, so the enlarged shot reads as a lightbox rather
+    // than floating over a still-legible page.
+    $("#shot-modal").modal({ dimmerSettings: { opacity: 0.88 } });
+
+    // Click (or Enter/Space, since each frame is a button) a screenshot to open it
+    // full size. Delegated from the section so it survives showLogin running twice.
+    $("#screenshots").off("click.shotzoom").on("click.shotzoom", ".js-shot-zoom", function () {
+      const img = this.querySelector("img");
+      if (!img) return;
+      // currentSrc, so a responsive/lazy swap resolves to what's actually displayed.
+      $("#shot-modal-img").attr("src", img.currentSrc || img.src).attr("alt", img.alt);
+      $("#shot-modal").modal("show");
+    });
+
+    // Clicking the image itself closes too — the dimmer around it already does.
+    $("#shot-modal-img").on("click", () => $("#shot-modal").modal("hide"));
   }
 
   // ===================== App shell =====================

@@ -209,6 +209,116 @@
         </div>
       </section>
 
+      <!-- Product screenshots -->
+      <section id="screenshots" class="landing-shots">
+        <h2 class="landing-section-title">See it in action</h2>
+        <p class="landing-section-lede">
+          Real screens from the app, not mockups. Here's what your week looks
+          like once it's in meerato.
+        </p>
+
+        <figure class="landing-shot landing-shot-lead">
+          <button type="button" class="landing-shot-frame js-shot-zoom">
+            <img src="/static/img/screenshots/overview.webp" width="1600" height="847" loading="lazy"
+                 alt="The meerato task list showing tasks from the Work, Private, Sports club and Kids' school buckets, each with a status and its bucket name" />
+          </button>
+          <figcaption>
+            <h3>Everything, grouped the way you live</h3>
+            <p>
+              Buckets down the side, every task in one list with its status and
+              bucket at a glance. Subtasks nest under their parent, and the
+              quick-add bar takes a whole task in one line.
+            </p>
+          </figcaption>
+        </figure>
+
+        <div class="landing-shots-grid">
+          <figure class="landing-shot">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/task-detail.webp" width="1600" height="847" loading="lazy"
+                   alt="A task detail pane with a markdown description, a subtask checklist, and an activity timeline of comments and status changes" />
+            </button>
+            <figcaption>
+              <h3>The whole story on one task</h3>
+              <p>
+                Markdown description, subtasks, files, and a single timeline
+                where comments and every status change live side by side.
+              </p>
+            </figcaption>
+          </figure>
+
+          <figure class="landing-shot">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/search.webp" width="1600" height="847" loading="lazy"
+                   alt="The search bar containing the regular expression \bthe\b, with matching tasks listed below" />
+            </button>
+            <figcaption>
+              <h3>Search that means it</h3>
+              <p>
+                A real regex engine in the search box. Anchors, alternation and
+                word boundaries, combined with status and bucket filters.
+              </p>
+            </figcaption>
+          </figure>
+
+          <figure class="landing-shot">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/analytics.webp" width="1600" height="847" loading="lazy"
+                   alt="The analytics panel showing new and completed task counts, completed tasks by bucket, and a table of tasks by status and bucket" />
+            </button>
+            <figcaption>
+              <h3>Know where the time goes</h3>
+              <p>
+                Throughput over a rolling window, what you finished per bucket,
+                and a live snapshot of where every task currently stands.
+              </p>
+            </figcaption>
+          </figure>
+
+          <figure class="landing-shot">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/automation.webp" width="1600" height="847" loading="lazy"
+                   alt="A list of recurring tasks with their bucket, cadence such as Every Monday or Monthly on the 1st, and the next run date" />
+            </button>
+            <figcaption>
+              <h3>The recurring stuff, handled</h3>
+              <p>
+                Daily, weekly, monthly or yearly. meerato creates the task on
+                schedule, in the right bucket, with the watcher already added.
+              </p>
+            </figcaption>
+          </figure>
+
+          <figure class="landing-shot">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/share.webp" width="1600" height="1000" loading="lazy"
+                   alt="The public share page for a task, showing its status, description, subtasks and activity timeline to a visitor with no account" />
+            </button>
+            <figcaption>
+              <h3>Share a task with anyone</h3>
+              <p>
+                One link and they see the task, its subtasks and the full
+                timeline. No account, no sign-up, always up to date.
+              </p>
+            </figcaption>
+          </figure>
+
+          <figure class="landing-shot is-portrait">
+            <button type="button" class="landing-shot-frame js-shot-zoom">
+              <img src="/static/img/screenshots/mobile.webp" width="560" height="890" loading="lazy"
+                   alt="meerato running on a phone, with the task list filling the screen and the sidebar collapsed behind a menu button" />
+            </button>
+            <figcaption>
+              <h3>The same app on your phone</h3>
+              <p>
+                Responsive from the start and installable as a PWA. It keeps
+                working offline and syncs when you're back online.
+              </p>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       <!-- Login box -->
       <section class="landing-login-section">
         <h2 class="landing-login-title">Give it a try</h2>
@@ -909,6 +1019,15 @@
     </div>
     <div class="actions">
       <div class="ui primary approve button">Got it</div>
+    </div>
+  </div>
+
+  <!-- Lightbox for the landing page's screenshots. "basic" drops the white modal
+       chrome so the shot sits on the dimmer; src is filled in on click. -->
+  <div class="ui basic fullscreen modal" id="shot-modal">
+    <i class="close icon"></i>
+    <div class="content shot-modal-content">
+      <img id="shot-modal-img" src="" alt="" />
     </div>
   </div>
 

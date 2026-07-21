@@ -988,6 +988,105 @@ body.resizing { cursor: col-resize; user-select: none; }
 .landing-status.red   { color:#cf222e; border-color:#f5c6c8; background:#fdf0f0; }
 .landing-status.green { color:#1a7f37; border-color:#bfe5c8; background:#eef9f1; }
 
+/* ---- Screenshot showcase ---- */
+/* Wider than .landing-features: these are real UI shots and need the room. */
+.landing-shots {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 1rem;
+  text-align: center;
+}
+.landing-shots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem;
+  text-align: left;
+}
+/* text-align:left overrides the section's centred heading alignment, so the lead
+   figure's caption matches the ones in the grid. */
+.landing-shot {
+  margin: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+/* A <button> so the shot is keyboard-reachable; the rules below strip the native
+   button chrome so it still reads as a plain framed image. It takes its accessible
+   name from the alt text of the image inside it. */
+.landing-shot-frame {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: zoom-in;
+  border: 1px solid #e6e8eb;
+  border-radius: 12px;
+  background: #f6f8fa;
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.landing-shot-frame:focus-visible {
+  outline: 2px solid #2185d0;
+  outline-offset: 2px;
+}
+.landing-shot:hover .landing-shot-frame {
+  border-color: #d0d7de;
+  box-shadow: 0 6px 20px rgba(27,31,36,.08);
+}
+.landing-shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Portrait (phone) shot: centred at its own height rather than stretched. The
+   frame fills the grid row so it ends level with the landscape shot beside it. */
+.landing-shot.is-portrait .landing-shot-frame {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.landing-shot.is-portrait .landing-shot-frame img {
+  width: auto;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 8px;
+}
+.landing-shot figcaption { padding: .95rem .25rem 0; }
+.landing-shot figcaption h3 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin: 0 0 .3rem;
+}
+.landing-shot figcaption p {
+  color: #57606a;
+  font-size: .95rem;
+  margin: 0;
+}
+.landing-shot-lead { margin-bottom: 1.75rem; }
+
+/* Screenshot lightbox. Capped at the viewport so tall shots (the share page, the
+   phone) stay fully visible rather than running off the bottom. */
+#shot-modal .shot-modal-content {
+  padding: 0 !important;
+  text-align: center;
+  background: transparent !important;
+}
+#shot-modal-img {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  max-height: 88vh;
+  border-radius: 8px;
+  background: #fff;
+  cursor: zoom-out;
+}
+
 /* ---- Footer ---- */
 .landing-footer {
   margin-top: 4rem;
@@ -1006,6 +1105,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 /* ---- Responsive ---- */
 @media (max-width: 820px) {
   .landing-grid { grid-template-columns: 1fr; }
+  .landing-shots-grid { grid-template-columns: 1fr; }
   .landing-login-section { margin: 2.5rem 1.25rem 0; padding: 2.5rem 1.5rem; }
   .landing-title { font-size: 2.05rem; }
   .landing-subtitle { font-size: 1.08rem; }
