@@ -690,6 +690,16 @@
               <tr><td><code>status</code></td><td>Optional. <code>open</code>, <code>on_list</code>, <code>blocked</code> or <code>done</code>.</td></tr>
             </tbody>
           </table>
+
+          <h4 class="ui horizontal divider header"><i class="search icon"></i> Example: look up your buckets and statuses</h4>
+          <p style="color:#888">A <code>GET</code> on the same URL returns the
+            <code>status</code> and <code>bucket_id</code> values you may send above —
+            including any custom statuses — so a script doesn't have to hard-code them.
+            <code>default_bucket_id</code> is where a task with no <code>bucket_id</code> lands.</p>
+          <div class="ui action fluid input" style="margin-bottom:.5rem">
+            <button class="ui icon button" id="api-copy-get"><i class="copy icon"></i> Copy curl command</button>
+          </div>
+          <pre id="api-get" class="api-curl-block"></pre>
         </div>
 
         <!-- ===== Settings panel ===== -->

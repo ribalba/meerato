@@ -10,12 +10,62 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DBSession
 
 from ..database import get_db
-from ..models import Bucket, EventType, Todo
-from ..schemas import ApiTaskCreate, TodoOut
+from ..models import STATUS_LABELS, Bucket, CustomStatus, EventType, Todo
+from ..schemas import ApiOptionsOut, ApiStatusOut, ApiTaskCreate, TodoOut
 from ..security import get_user_by_api_token, new_id
 from ..services import attach_to_todo, record_event, valid_status
 
 router = APIRouter(prefix="/api", tags=["external"])
+
+
+def _authenticate(db: DBSession, token: str):
+    user = get_user_by_api_token(db, token)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    return user
+
+
+def _open_buckets(db: DBSession, owner_id: str):
+    """The caller's usable buckets, in the same order POST /create picks from."""
+    return (
+        db.query(Bucket)
+        .filter(Bucket.owner_id == owner_id, Bucket.deleted.is_(False), Bucket.archived.is_(False))
+        .order_by(Bucket.position, Bucket.created_at)
+        .all()
+    )
+
+
+@router.get("/create", response_model=ApiOptionsOut)
+def api_create_options(
+    token: str = Query(..., description="Your API token (see the API page in the app)"),
+    db: DBSession = Depends(get_db),
+):
+    """Discovery for the create endpoint: the statuses and buckets a POST may use.
+
+    Lets a script fetch the valid ``status`` and ``bucket_id`` values instead of
+    hard-coding them. ``default_bucket_id`` is the bucket a POST without a
+    ``bucket_id`` would land in.
+    """
+    user = _authenticate(db, token)
+
+    statuses = [
+        ApiStatusOut(value=value, label=label, builtin=True)
+        for value, label in STATUS_LABELS.items()
+    ]
+    statuses += [
+        ApiStatusOut(value=cs.value, label=cs.label, builtin=False)
+        for cs in db.query(CustomStatus)
+        .filter(CustomStatus.owner_id == user.id)
+        .order_by(CustomStatus.position, CustomStatus.created_at)
+        .all()
+    ]
+
+    buckets = _open_buckets(db, user.id)
+    return ApiOptionsOut(
+        statuses=statuses,
+        buckets=buckets,
+        default_bucket_id=buckets[0].id if buckets else None,
+    )
 
 
 @router.post("/create", response_model=TodoOut, status_code=201)
@@ -24,9 +74,7 @@ def api_create_todo(
     token: str = Query(..., description="Your API token (see the API page in the app)"),
     db: DBSession = Depends(get_db),
 ):
-    user = get_user_by_api_token(db, token)
-    if user is None:
-        raise HTTPException(status_code=401, detail="Invalid API token")
+    user = _authenticate(db, token)
 
     valid_status(db, user.id, payload.status)
 
@@ -37,12 +85,8 @@ def api_create_todo(
         if bucket is None or bucket.deleted or bucket.owner_id != user.id:
             raise HTTPException(status_code=404, detail="Bucket not found")
     else:
-        bucket = (
-            db.query(Bucket)
-            .filter(Bucket.owner_id == user.id, Bucket.deleted.is_(False), Bucket.archived.is_(False))
-            .order_by(Bucket.position, Bucket.created_at)
-            .first()
-        )
+        buckets = _open_buckets(db, user.id)
+        bucket = buckets[0] if buckets else None
         if bucket is None:
             raise HTTPException(status_code=400, detail="No bucket to add the task to")
 

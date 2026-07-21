@@ -375,6 +375,7 @@
     $("#api-rotate").on("click", () => App.rotateApiToken());
     $("#api-copy-endpoint").on("click", () => App.copyText($("#api-endpoint").val(), "Endpoint copied"));
     $("#api-copy-curl").on("click", () => App.copyText(App.apiCurl, "curl command copied"));
+    $("#api-copy-get").on("click", () => App.copyText(App.apiGet, "curl command copied"));
 
     // "How you can use this with software" modal (per-tool reveals).
     $("#api-software-accordion").accordion();

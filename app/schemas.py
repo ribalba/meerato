@@ -188,6 +188,26 @@ class BucketOut(BucketBase):
     updated_at: datetime
 
 
+# --- External create-task API: options ---
+# (declared here rather than next to ApiTaskCreate because it embeds BucketOut)
+
+
+class ApiStatusOut(BaseModel):
+    """A status the external API will accept, built-in or user-defined."""
+
+    value: str
+    label: str
+    builtin: bool
+
+
+class ApiOptionsOut(BaseModel):
+    """Answer to GET /api/create: the values a POST to it may use."""
+
+    statuses: list[ApiStatusOut]
+    buckets: list[BucketOut]
+    default_bucket_id: str | None = None
+
+
 # --- Events / comments ---
 
 
