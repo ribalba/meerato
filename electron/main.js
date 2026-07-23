@@ -18,6 +18,13 @@ const PROTOCOL = "meerato";
 
 let mainWindow = null;
 
+// Linux shells match a window to its installed icon by name, not by the `icon`
+// option below: X11 compares WM_CLASS (taken from the app name) and Wayland the
+// app_id (taken from the executable, or --class) against StartupWMClass in
+// meerato.desktop. Packaged builds name the executable "meerato" so they line up;
+// `npm start` runs the `electron` binary, hence the --class in that script.
+app.setName("Meerato");
+
 function isInternal(targetUrl) {
   try {
     return new URL(targetUrl).origin === APP_ORIGIN;

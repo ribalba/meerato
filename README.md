@@ -122,4 +122,17 @@ app/
 - `POST /api/sync/push`, `GET /api/sync/pull?since=…`
 - `GET /api/public/{public_token}` → read-only shared view (no watcher emails leaked)
 
+Token-authenticated (`?token=…`, see the API page in the app) so scripts, cron and
+shortcuts can reach an account without a session cookie:
+
+- `GET  /api/create` → the statuses and buckets a create may use
+- `POST /api/create` → create a task; the title understands the same shorthand as the
+  quick-add box — `#bucket`, `@watcher@example.com`, `!status` and a trailing date phrase
+  ("next week", "in 3 days", "on 2026-08-01"). Parsed by `app/quickadd.py` against the
+  owner's timezone; send `parse: false` for a literal title.
+- `GET  /api/tasks[?bucket_id=…&status=…]` → every task you own as JSON (deleted ones
+  left out), each with its `bucket_name` alongside `bucket_id`
+- `GET/POST /api/schedule`, `DELETE /api/schedule/{id}` → scheduled status changes on an
+  existing task (applied at local midnight by the background scheduler)
+
 Interactive API docs are at `/docs`.

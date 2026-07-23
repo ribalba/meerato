@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --class=meerato",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
@@ -24,7 +24,7 @@
     "appId": "com.meerato.desktop",
     "productName": "Meerato",
     "directories": { "buildResources": "build", "output": "dist" },
-    "files": ["main.js", "package.json"],
+    "files": ["main.js", "package.json", "build/icon.png"],
     "protocols": [
       { "name": "Meerato", "schemes": ["meerato"] }
     ],
@@ -39,7 +39,12 @@
       "target": ["AppImage", "deb"],
       "category": "Office",
       "synopsis": "Desktop wrapper for the Meerato to-do app.",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "icon": "build/icons",
+      "executableName": "meerato",
+      "desktop": {
+        "entry": { "StartupWMClass": "meerato" }
+      }
     }
   }
 }

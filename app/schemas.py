@@ -95,6 +95,36 @@ class ApiTaskCreate(BaseModel):
     text: str = ""
     bucket_id: str | None = None  # defaults to the user's first bucket
     status: str = "open"
+    # Watchers to add, on top of any parsed out of the title with "@".
+    watchers: list[EmailStr] = Field(default_factory=list)
+    # Schedule a status change instead of (or as well as) setting one now. Takes
+    # precedence over a date phrase parsed out of the title.
+    schedule: ScheduleCreate | None = None
+    # Interpret the quick-add shorthand (#bucket, @watcher, !status, trailing date
+    # phrase) in `title`. Set false to take the title verbatim.
+    parse: bool = True
+
+
+class ApiScheduleCreate(BaseModel):
+    """Body for the token-authenticated POST /api/schedule endpoint."""
+
+    todo_id: str
+    date: date
+    status: str = "on_list"  # "Now" by default
+
+
+class ApiParsedOut(BaseModel):
+    """What POST /api/create made of the title, so a caller can confirm it."""
+
+    title: str
+    bucket_name: str | None = None
+    status: str | None = None
+    scheduled_date: date | None = None
+    scheduled_status: str | None = None
+    watchers: list[str] = Field(default_factory=list)
+
+
+# ApiTaskOut is defined with TodoOut below, which it extends.
 
 
 # --- Recurring tasks (Automation) ---
@@ -310,6 +340,21 @@ class TodoOut(BaseModel):
     # True when the todo has a pending (unapplied) scheduled status change. Set by
     # attach_to_todos on sync pull so the task list can show a calendar indicator.
     has_schedule: bool = False
+
+
+class ApiTaskOut(TodoOut):
+    """POST /api/create's answer. The task's own fields stay at the top level (so
+    callers written against the old TodoOut response keep working); ``parsed``
+    reports what the quick-add shorthand in the title resolved to."""
+
+    parsed: ApiParsedOut
+
+
+class ApiTodoOut(TodoOut):
+    """One task in GET /api/tasks. Carries the bucket's name alongside its id so
+    a script can read the list without a second call to resolve buckets."""
+
+    bucket_name: str | None = None
 
 
 # --- Sync ---

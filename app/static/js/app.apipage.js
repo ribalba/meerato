@@ -10,6 +10,7 @@
 
   App.apiCurl = "";   // current curl example, kept in sync with the bucket/status selects
   App.apiGet = "";    // curl example for the GET (buckets + statuses) on the same URL
+  App.apiTasks = "";  // curl example for GET /api/tasks (read every task back)
   App.apiShell = "";  // shell alias snippet (How-you-can-use-this modal)
   App.apiAlfred = ""; // Alfred Run Script snippet
 
@@ -29,6 +30,9 @@
 
     App.apiGet = `curl "${endpoint}"`;
     $("#api-get").text(App.apiGet);
+
+    App.apiTasks = `curl "${location.origin}/api/tasks?token=${token}"`;
+    $("#api-tasks").text(App.apiTasks);
 
     // The bucket + status picked above are baked into the snippets (same as the
     // curl example). They sit inside a double-quoted shell string, so each JSON

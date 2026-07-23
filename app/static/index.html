@@ -633,8 +633,9 @@
           </h3>
           <p style="color:#888">
             Create a task from anywhere (a script, a shortcut, cron) by POSTing to your
-            personal endpoint. The token below identifies your account, so keep it secret;
-            anyone with it can add tasks for you.
+            personal endpoint, or read your tasks back out as JSON. The token below
+            identifies your account, so keep it secret; anyone with it can add tasks for
+            you and read the ones you have.
           </p>
 
           <h4 class="ui horizontal divider header"><i class="linkify icon"></i> Your endpoint</h4>
@@ -686,10 +687,48 @@
             <tbody>
               <tr><td><code>title</code></td><td>Required. The task title.</td></tr>
               <tr><td><code>text</code></td><td>Optional. Description (markdown).</td></tr>
-              <tr><td><code>bucket_id</code></td><td>Optional. Defaults to your first bucket.</td></tr>
-              <tr><td><code>status</code></td><td>Optional. <code>open</code>, <code>on_list</code>, <code>blocked</code> or <code>done</code>.</td></tr>
+              <tr><td><code>bucket_id</code></td><td>Optional. Defaults to your first bucket. Overrides a <code>#bucket</code> in the title.</td></tr>
+              <tr><td><code>status</code></td><td>Optional. <code>open</code>, <code>on_list</code>, <code>blocked</code> or <code>done</code>. Overrides a <code>!status</code> in the title.</td></tr>
+              <tr><td><code>watchers</code></td><td>Optional. List of email addresses, added on top of any <code>@</code> in the title.</td></tr>
+              <tr><td><code>schedule</code></td><td>Optional. <code>{"date": "2026-08-01", "status": "on_list"}</code> — move the task to that status on that day. Overrides a date phrase in the title.</td></tr>
+              <tr><td><code>parse</code></td><td>Optional, default <code>true</code>. Set <code>false</code> to take the title literally, without the shorthand below.</td></tr>
             </tbody>
           </table>
+          <p style="color:#888">The response is the created task, plus a <code>parsed</code>
+            object reporting what the shorthand resolved to — handy for checking that a
+            title was understood the way you meant.</p>
+
+          <h4 class="ui horizontal divider header"><i class="magic icon"></i> Shorthand in the title</h4>
+          <p style="color:#888">Titles understand the same shorthand as the quick-add box in
+            the app. Anything that doesn't resolve (an unknown bucket, an unknown status, a
+            malformed address) is simply left in the title.</p>
+          <table class="ui very basic compact table">
+            <tbody>
+              <tr><td><code>#Bucket name</code></td><td>File under an existing bucket. The longest matching name wins.</td></tr>
+              <tr><td><code>@who@example.com</code></td><td>Add a watcher; they get an email on every change.</td></tr>
+              <tr><td><code>!status</code></td><td>Set the status — e.g. <code>!now</code>, <code>!done</code>, <code>!backlog</code>, <code>!blocked</code>, or any custom status.</td></tr>
+              <tr><td>A date at the end</td><td>Start in Backlog and schedule a move to <em>Now</em> that day.</td></tr>
+            </tbody>
+          </table>
+          <p style="color:#888">Recognized date phrases, which must come last:
+            <code>tomorrow</code>, <code>next week</code>, <code>next month</code>,
+            <code>next year</code>, <code>next monday</code> (any weekday),
+            <code>friday</code>, <code>in 3 days</code>, <code>in 2 weeks</code>,
+            <code>in 6 months</code>, <code>on 2026-08-01</code>. They resolve against
+            today in your timezone (set it in Settings), and scheduled changes fire at
+            midnight local time.</p>
+          <pre class="api-curl-block">{"title": "Email the accountant #Work @jo@example.com next week"}</pre>
+
+          <h4 class="ui horizontal divider header"><i class="calendar alternate outline icon"></i> Scheduling status changes</h4>
+          <p style="color:#888">To schedule a status change on a task that already exists,
+            POST to <code>/api/schedule</code> with the same token. A task can hold several
+            pending changes; they apply in date order.</p>
+          <pre class="api-curl-block">curl -X POST "…/api/schedule?token=YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"todo_id": "…", "date": "2026-08-01", "status": "on_list"}'</pre>
+          <p style="color:#888">A <code>GET /api/schedule?token=…&amp;todo_id=…</code> lists the
+            pending changes for a task, and <code>DELETE /api/schedule/{id}?token=…</code>
+            cancels one.</p>
 
           <h4 class="ui horizontal divider header"><i class="search icon"></i> Example: look up your buckets and statuses</h4>
           <p style="color:#888">A <code>GET</code> on the same URL returns the
@@ -700,6 +739,22 @@
             <button class="ui icon button" id="api-copy-get"><i class="copy icon"></i> Copy curl command</button>
           </div>
           <pre id="api-get" class="api-curl-block"></pre>
+
+          <h4 class="ui horizontal divider header"><i class="download icon"></i> Example: read all your tasks</h4>
+          <p style="color:#888">A <code>GET</code> on <code>/api/tasks</code> with the same
+            token returns every task you own as JSON — the same fields the app syncs, plus
+            <code>bucket_name</code> next to <code>bucket_id</code>. Deleted tasks are left
+            out; tasks in archived buckets are included.</p>
+          <div class="ui action fluid input" style="margin-bottom:.5rem">
+            <button class="ui icon button" id="api-copy-tasks"><i class="copy icon"></i> Copy curl command</button>
+          </div>
+          <pre id="api-tasks" class="api-curl-block"></pre>
+          <table class="ui very basic compact table">
+            <tbody>
+              <tr><td><code>bucket_id</code></td><td>Optional. Only tasks in that bucket.</td></tr>
+              <tr><td><code>status</code></td><td>Optional. Only tasks with that status, e.g. <code>on_list</code>.</td></tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- ===== Settings panel ===== -->

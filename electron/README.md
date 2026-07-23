@@ -25,6 +25,16 @@ npm run dist     # full installers for the current OS, into electron/dist/
 npm run pack     # unpacked app (faster, for local testing)
 ```
 
+On Linux, `make distinstall` builds the AppImage and wires it into the desktop
+so KDE and GNOME can find and launch it: it symlinks the AppImage to
+`~/.local/bin/meerato`, copies the icons into the hicolor theme, writes
+`~/.local/share/applications/meerato.desktop`, and registers the app as the
+handler for `meerato://` links (needed for desktop sign-in). Because it is a
+symlink, a later `make dist` updates the installed app in place. Override the
+baked-in URL with `make distinstall MEERATO_URL=http://localhost:8000`, install
+system-wide with `sudo make distinstall PREFIX=/usr/local`, and undo it all with
+`make distuninstall`.
+
 electron-builder reads the app icon from `build/icon.png`. For polished
 production builds, add platform-native icons (`build/icon.icns` for macOS,
 `build/icon.ico` for Windows); a single 512×512 PNG works otherwise.
