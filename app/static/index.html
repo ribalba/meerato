@@ -920,6 +920,45 @@
           <p style="color:#999;font-size:.85em;margin-top:.5rem">Now type
             <code>todo Buy milk</code> in Alfred to create the task.</p>
         </div>
+
+        <!-- iPhone / iPad share sheet -->
+        <div class="title">
+          <i class="dropdown icon"></i><i class="apple icon"></i> iPhone / iPad (share sheet)
+        </div>
+        <div class="content">
+          <p>iOS doesn't let a web app add itself to the share sheet, but the built-in
+            <strong>Shortcuts</strong> app can. Build this once and “Add to meerato” shows up
+            when you share from Safari, Mail, Notes, or any selected text on the phone.</p>
+          <ol class="api-howto">
+            <li>Open <strong>Shortcuts</strong>, tap <strong>+</strong>, then rename the shortcut
+              to <strong>Add to meerato</strong>. That name is what you'll tap in the share sheet.</li>
+            <li>Open the <strong>ⓘ</strong> (Details) tab and turn on
+              <strong>Show in Share Sheet</strong>. Under <strong>Share Sheet Types</strong> keep
+              <em>Text</em> and <em>URLs</em>, and turn the rest off so it only offers itself when
+              it can actually help.</li>
+            <li>Add an <strong>Ask for Input</strong> action. Set the input type to
+              <em>Text</em>, the prompt to <em>Task</em>, and the <strong>Default Answer</strong>
+              to <strong>Shortcut Input</strong>. This is the step that lets you fix up the title,
+              and add <code>#Bucket</code>, <code>!now</code> or <code>next week</code>, before it saves.</li>
+            <li>Add a <strong>Get Contents of URL</strong> action and paste the URL below into it.
+              Set <strong>Method</strong> to <code>POST</code>, add a header
+              <code>Content-Type</code> with the value <code>application/json</code>, set
+              <strong>Request Body</strong> to <strong>JSON</strong>, and add a single
+              <em>Text</em> field named <code>title</code> whose value is the
+              <strong>Provided Input</strong> from the previous step.</li>
+            <li>Optional: finish with a <strong>Show Notification</strong> action so you get a
+              confirmation instead of a silent save.</li>
+          </ol>
+          <div class="ui action fluid input" style="margin-bottom:.5rem">
+            <button class="ui icon button" id="api-copy-ios"><i class="copy icon"></i> Copy endpoint URL</button>
+          </div>
+          <pre id="api-ios-block" class="api-curl-block"></pre>
+          <p style="color:#999;font-size:.85em;margin-top:.5rem">The URL already contains your
+            token, so treat it like a password. Tasks land in your default bucket unless the title
+            names one. To pin the shortcut to a specific bucket or status instead, add
+            <code>bucket_id</code> and <code>status</code> as extra text fields in the JSON body,
+            using the values from the <em>Defaults for created tasks</em> pickers.</p>
+        </div>
       </div>
     </div>
     <div class="actions">

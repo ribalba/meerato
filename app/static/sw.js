@@ -14,7 +14,10 @@
  *
  * Bump VERSION whenever the precache list changes to evict old caches.
  */
-const VERSION = "todo-v35";
+const VERSION = "todo-v36";
+
+// Query params a share_target navigation arrives with (see manifest.webmanifest).
+const SHARE_PARAMS = ["share_title", "share_text", "share_url"];
 
 // Same-origin shell: small and local, so precaching these is fast and safe to
 // block install on.
@@ -110,18 +113,25 @@ self.addEventListener("fetch", (event) => {
   // Navigations: stale-while-revalidate. Serve the cached shell instantly (so the
   // splash paints with no network wait), then refresh the cache in the background.
   if (request.mode === "navigate") {
+    // A share_target navigation is the app shell carrying a one-off payload in its
+    // query string (the page reads it from location.search). So serve it from the
+    // shell's own cache entry, and never cache the URL itself. Otherwise every
+    // single share would leave behind a dead entry that lives until the next
+    // VERSION bump.
+    const isShare = SHARE_PARAMS.some((p) => url.searchParams.has(p));
+
     event.respondWith(
       (async () => {
         // Exact match only — never serve the cached app shell in place of, say,
         // a /t/{token} share page that just hasn't been cached yet.
-        const cached = await caches.match(request);
+        const cached = await caches.match(isShare ? "/" : request);
 
         const refresh = (async () => {
           try {
             // Navigation preload already fired this fetch in parallel; use it.
             const preloaded = await event.preloadResponse;
             const resp = preloaded || (await fetch(request));
-            putInCache(request, resp);
+            if (!isShare) putInCache(request, resp);
             return resp;
           } catch (e) {
             return null;

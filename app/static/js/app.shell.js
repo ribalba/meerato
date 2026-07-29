@@ -25,7 +25,56 @@
     setTimeout(() => el.remove(), 450);
   }
 
+  // ---- Web Share Target ----
+  // The OS hands a shared payload to the installed app as query params on "/"
+  // (see `share_target` in manifest.webmanifest). iOS Safari doesn't implement
+  // the API, so on iPhone the same entry point is driven by a Shortcut instead.
+  // Either way the payload arrives here and lands in the quick-add box.
+  const SHARE_PARAMS = ["share_title", "share_text", "share_url"];
+  const SHARE_KEY = "pending_share";
+
+  // Collapse a shared {title, text, url} into one quick-add line. Apps are
+  // inconsistent about which field they fill (some put the link in `text` and
+  // leave `url` empty), so drop duplicates and only append the URL if it isn't
+  // already in there.
+  function sharedQuickAddText(params) {
+    const parts = [];
+    for (const key of ["share_title", "share_text"]) {
+      const v = (params.get(key) || "").trim();
+      if (v && !parts.includes(v)) parts.push(v);
+    }
+    const url = (params.get("share_url") || "").trim();
+    if (url && !parts.some((p) => p.includes(url))) parts.push(url);
+    // The quick-add box is a single-line input, so flatten any shared newlines.
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  // Stash the payload and strip it from the URL. Signing in reloads to "/", so
+  // without this the shared text would be lost whenever the share arrives on a
+  // signed-out app.
+  function stashSharedText() {
+    const params = new URLSearchParams(location.search);
+    if (!SHARE_PARAMS.some((p) => params.has(p))) return;
+    const text = sharedQuickAddText(params);
+    if (text) sessionStorage.setItem(SHARE_KEY, text);
+    history.replaceState({}, "", "/");
+  }
+
+  // Drop a stashed share into the quick-add box, ready to edit. Deliberately not
+  // auto-submitted: the shorthand (#Bucket, !now, a trailing date) is the point of
+  // sharing into the box, and the user gets a chance to trim a noisy page title.
+  function applySharedText() {
+    const shared = sessionStorage.getItem(SHARE_KEY);
+    if (!shared) return;
+    sessionStorage.removeItem(SHARE_KEY);
+    $("#quick-add-input").val(shared).trigger("focus");
+    toast("Shared text is in the add box. Edit it, then press Enter.");
+  }
+
   async function boot() {
+    // Before the auth check: showLogin() and the post-sign-in reload both discard
+    // location.search, so the payload has to be captured first.
+    stashSharedText();
     if ("serviceWorker" in navigator) {
       // Register after `load` so installing/precaching never competes with the
       // initial navigation and critical resources — registering during boot lets
@@ -236,6 +285,9 @@
       history.replaceState({}, "", "/");
       enterWatching();
     }
+
+    // Last, so the focused quick-add box isn't stolen by a deep-linked task.
+    applySharedText();
   }
 
   // Drag the gutter to resize the list vs. detail columns; width is remembered.
@@ -383,6 +435,7 @@
     $("#api-software-btn").on("click", () => $("#api-software-modal").modal("show"));
     $("#api-copy-shell").on("click", () => App.copyText(App.apiShell, "Alias copied"));
     $("#api-copy-alfred").on("click", () => App.copyText(App.apiAlfred, "Script copied"));
+    $("#api-copy-ios").on("click", () => App.copyText(App.apiIos, "Endpoint copied"));
 
     // Permanent quick-add bar (submit with Enter, unless the autocomplete menu
     // is open — then Enter/Tab/arrows drive the menu instead).

@@ -179,6 +179,12 @@ def api_create_todo(
     db.add(todo)
     record_event(db, todo, EventType.created, body="Created task (API)", actor_email=user.email)
 
+    # ScheduledStatusChange carries a bare FK to todos.id with no ORM relationship
+    # back to Todo, so the unit of work has no dependency edge telling it to insert
+    # the task first: it would order the schedule's INSERT ahead of the task's and
+    # trip the foreign key. Flush the task now so the row exists to point at.
+    db.flush()
+
     # An explicit `schedule` beats a date phrase in the title; a date phrase with
     # no explicit status starts the task in Backlog and moves it to "Now" that day.
     sched_date = payload.schedule.date if payload.schedule else parsed.schedule_date

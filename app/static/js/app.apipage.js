@@ -13,6 +13,7 @@
   App.apiTasks = "";  // curl example for GET /api/tasks (read every task back)
   App.apiShell = "";  // shell alias snippet (How-you-can-use-this modal)
   App.apiAlfred = ""; // Alfred Run Script snippet
+  App.apiIos = "";    // endpoint for the iOS Shortcuts share-sheet recipe
 
   // Rebuild the endpoint URL + curl example from the current token and selectors.
   function updateApiCurl() {
@@ -58,6 +59,11 @@
       `  -H "Content-Type: application/json" \\\n` +
       `  -d "{\\"title\\": \\"\${query//\\"/\\\\\\"}\\"${bodyTail}}"`;
     $("#api-alfred-block").text(App.apiAlfred);
+
+    // iOS Shortcuts builds the JSON body in its own UI, so the recipe only needs
+    // the bare endpoint, with no bucket/status baked in.
+    App.apiIos = endpoint;
+    $("#api-ios-block").text(App.apiIos);
   }
 
   async function showApiPage() {
