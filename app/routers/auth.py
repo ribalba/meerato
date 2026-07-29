@@ -8,6 +8,7 @@ from ..config import get_settings
 from ..database import get_db
 from ..emailer import send_login_link
 from ..schemas import LoginRequest, ProfileUpdate, UserOut, VerifyCodeRequest
+from ..services import get_owned_bucket, valid_status
 from ..security import (
     SESSION_COOKIE,
     consume_login_code,
@@ -105,6 +106,19 @@ def update_me(
         user.timezone = data["timezone"]
     if "name" in data:
         user.name = (data["name"] or "").strip() or None
+    # New-task defaults. Validated on the way in so a bad id can never be stored,
+    # but the read side (external._default_bucket) still falls back rather than
+    # erroring, since a bucket can be archived or deleted after being chosen here.
+    if "default_bucket_id" in data:
+        bucket_id = data["default_bucket_id"] or None
+        if bucket_id is not None:
+            get_owned_bucket(db, bucket_id, user)
+        user.default_bucket_id = bucket_id
+    if "default_status" in data:
+        status = (data["default_status"] or "").strip() or None
+        if status is not None:
+            valid_status(db, user.id, status)
+        user.default_status = status
     db.commit()
     db.refresh(user)
     return user

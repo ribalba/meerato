@@ -241,6 +241,7 @@
         }
       } catch (e) { /* ignore */ }
     }
+    await reconcileNewTaskDefaults();
 
     bindShellEvents();
     setupResizer();
@@ -380,8 +381,8 @@
       $("#notif-modal").modal("hide");
       toast("Marked all as read");
     });
-    $("#default-bucket").on("change", function () { DB.setMeta("default_bucket", this.value); });
-    $("#default-status").on("change", function () { DB.setMeta("default_status", this.value); });
+    $("#default-bucket").on("change", function () { saveNewTaskDefault("default_bucket", "default_bucket_id", this.value); });
+    $("#default-status").on("change", function () { saveNewTaskDefault("default_status", "default_status", this.value); });
     $("#tz-select").on("change", async function () {
       try {
         const u = await API.patch("/api/auth/me", { timezone: this.value });
@@ -833,6 +834,40 @@
     const buckets = await liveBuckets();
     if (saved && buckets.some((b) => b.id === saved && !b.archived)) return saved;
     return (buckets.find((b) => !b.archived) || buckets[0] || {}).id || null;
+  }
+
+  // Each default is stored twice: in local meta, which the quick-add box reads so
+  // it keeps working offline, and on the user record, which is the only copy the
+  // external API can see (the server has no access to this browser's storage).
+  async function saveNewTaskDefault(metaKey, field, value) {
+    await DB.setMeta(metaKey, value);
+    try {
+      Object.assign(state.user, await API.patch("/api/auth/me", { [field]: value }));
+    } catch (e) {
+      toast(errText(e), "error");
+    }
+  }
+
+  // Reconcile the two copies at sign-in. These settings predate the server-side
+  // ones, so a long-standing user's choice exists only in local meta — push that
+  // up once. Otherwise the server wins, since it is what other devices and the
+  // API read. Nothing is pushed for a user who never picked a default: the
+  // fallbacks above resolve at read time and aren't a stated preference.
+  async function reconcileNewTaskDefaults() {
+    for (const [metaKey, field] of [["default_bucket", "default_bucket_id"], ["default_status", "default_status"]]) {
+      if (state.user[field]) {
+        await DB.setMeta(metaKey, state.user[field]);
+        continue;
+      }
+      const local = await DB.getMeta(metaKey, null);
+      // Sent one field per request so a rejected value (a bucket deleted on
+      // another device) can't take the other one down with it.
+      if (local) {
+        try {
+          Object.assign(state.user, await API.patch("/api/auth/me", { [field]: local }));
+        } catch (e) { /* offline or stale: local meta still drives the app */ }
+      }
+    }
   }
 
   // Wipe the local mirror + per-account state (on logout / account switch).

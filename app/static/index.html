@@ -687,8 +687,8 @@
             <tbody>
               <tr><td><code>title</code></td><td>Required. The task title.</td></tr>
               <tr><td><code>text</code></td><td>Optional. Description (markdown).</td></tr>
-              <tr><td><code>bucket_id</code></td><td>Optional. Defaults to your first bucket. Overrides a <code>#bucket</code> in the title.</td></tr>
-              <tr><td><code>status</code></td><td>Optional. <code>open</code>, <code>on_list</code>, <code>blocked</code> or <code>done</code>. Overrides a <code>!status</code> in the title.</td></tr>
+              <tr><td><code>bucket_id</code></td><td>Optional. Defaults to your new-task default bucket (Settings). Overrides a <code>#bucket</code> in the title.</td></tr>
+              <tr><td><code>status</code></td><td>Optional. <code>open</code>, <code>on_list</code>, <code>blocked</code> or <code>done</code>. Defaults to your new-task default status (Settings). Overrides a <code>!status</code> in the title.</td></tr>
               <tr><td><code>watchers</code></td><td>Optional. List of email addresses, added on top of any <code>@</code> in the title.</td></tr>
               <tr><td><code>schedule</code></td><td>Optional. <code>{"date": "2026-08-01", "status": "on_list"}</code> — move the task to that status on that day. Overrides a date phrase in the title.</td></tr>
               <tr><td><code>parse</code></td><td>Optional, default <code>true</code>. Set <code>false</code> to take the title literally, without the shorthand below.</td></tr>
@@ -734,7 +734,8 @@
           <p style="color:#888">A <code>GET</code> on the same URL returns the
             <code>status</code> and <code>bucket_id</code> values you may send above —
             including any custom statuses — so a script doesn't have to hard-code them.
-            <code>default_bucket_id</code> is where a task with no <code>bucket_id</code> lands.</p>
+            <code>default_bucket_id</code> and <code>default_status</code> are where a task
+            that omits those fields lands — your new-task defaults from Settings.</p>
           <div class="ui action fluid input" style="margin-bottom:.5rem">
             <button class="ui icon button" id="api-copy-get"><i class="copy icon"></i> Copy curl command</button>
           </div>

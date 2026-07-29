@@ -69,6 +69,15 @@ class User(Base):
     # Secret token for the external "create task" API (POST /api/create?token=…).
     # Null until the user first opens the API page; rotatable.
     api_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    # "New task defaults" from Settings: where a task lands when the caller names
+    # neither a bucket nor a status. Held server-side (rather than only in the
+    # browser's local meta) so the external API honours the same preference the
+    # app does. Null means "no preference" — first open bucket / Backlog. Kept as
+    # a plain column, not a FK: buckets.owner_id already points back here, and a
+    # second edge would make the two tables mutually dependent at create_all time.
+    # A stale id (bucket since deleted or archived) falls back instead of failing.
+    default_bucket_id: Mapped[str | None] = mapped_column(String(36))
+    default_status: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
