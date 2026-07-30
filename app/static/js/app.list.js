@@ -85,6 +85,11 @@
   // ===================== Task tree =====================
 
   async function renderList(buckets) {
+    // The subtask toggle is static rail markup; keep its lit state (subtasks
+    // hidden) + tooltip in sync even while a panel or the Watching view is open.
+    $("#toggle-subtasks")
+      .toggleClass("active", !state.showSubtasks)
+      .attr("title", state.showSubtasks ? "Hide subtasks" : "Show subtasks");
     // A main-pane panel (Automation / API) is open: it owns the content area,
     // so leave the task-list chrome hidden and don't render tasks underneath.
     if (state.panel) return;
@@ -95,10 +100,6 @@
       return;
     }
     if (!state.search.active) $("#quick-add").show();
-    // The subtask toggle is static markup; keep its pressed state + tooltip in sync.
-    $("#toggle-subtasks")
-      .toggleClass("active", state.showSubtasks)
-      .attr("title", state.showSubtasks ? "Hide subtasks" : "Show subtasks");
 
     const all = await liveTodos();
     const unread = await unreadByTask();

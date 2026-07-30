@@ -467,7 +467,8 @@
         <div id="rail-scroll">
           <div class="rail-brand">
             <span class="rail-brand-name"><img src="/static/logo-192.png" alt="" style="height:1.9em;vertical-align:-0.5em;margin-right:.35rem">meerato</span>
-            <a class="rail-search-btn js-search-toggle" title="Search tasks ( / )"><i class="search icon"></i></a>
+            <a id="toggle-subtasks" class="rail-icon-btn" title="Hide subtasks" aria-label="Show or hide subtasks"><i class="sitemap icon"></i></a>
+            <a class="rail-search-btn rail-icon-btn js-search-toggle" title="Search tasks ( / )"><i class="search icon"></i></a>
           </div>
           <div class="rail-section">
             <div class="rail-section-label">Status</div>
@@ -522,9 +523,6 @@
             </div>
             <button type="button" id="quick-add-help" class="ui big icon button" title="Smart add syntax" aria-label="Smart add syntax">
               <i class="question circle outline icon"></i>
-            </button>
-            <button type="button" id="toggle-subtasks" class="ui big icon button" title="Hide subtasks" aria-label="Show or hide subtasks">
-              <i class="sitemap icon"></i>
             </button>
           </div>
         </div>
