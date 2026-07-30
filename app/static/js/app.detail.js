@@ -67,8 +67,25 @@
       .filter((e) => e.todo_id === id && !e.deleted)
       .sort((a, b) => new Date(asUtc(a.created_at)) - new Date(asUtc(b.created_at)));
 
+    // Replacing the pane's DOM would silently steal focus (and any half-typed
+    // text) from the "Add a subtask" field — e.g. when a background sync lands
+    // while the user is typing the next subtask. Capture and restore it.
+    const subEl = document.getElementById("d-sub-title");
+    const subFocused = subEl && document.activeElement === subEl;
+    const subVal = subFocused ? subEl.value : "";
+    const subCaret = subFocused ? subEl.selectionStart : 0;
+
     $("#detail-body").html(detailHtml(todo, buckets, subtodos, events));
     initDetail(todo, buckets);
+
+    if (subFocused) {
+      const el = document.getElementById("d-sub-title");
+      if (el) {
+        el.value = subVal;
+        el.focus();
+        el.setSelectionRange(subCaret, subCaret);
+      }
+    }
   }
 
   function detailHtml(todo, buckets, subtodos, events) {
@@ -369,7 +386,9 @@
       await Sync.mutate("todo", "create", null, {
         title, bucket_id: todo.bucket_id, parent_id: id, status: "open", position: Date.now(),
       });
-      $("#d-sub-title").val("");
+      // Refocus so several subtasks can be typed in a row (the Add button click
+      // moved focus to itself); refreshOpenTodo keeps it across the re-render.
+      $("#d-sub-title").val("").trigger("focus");
     }
     $(".d-sub-check").on("change", async function () {
       const sid = $(this).data("id");

@@ -268,6 +268,9 @@
       if (order.length) state.statusFilter = order[0];
     }
 
+    // Restore the saved subtask-visibility toggle (defaults to shown).
+    state.showSubtasks = (await DB.getMeta("show_subtasks", true)) !== false;
+
     await App.renderAll();
 
     // Deep links: /?watch=<public_token> opens the Watching tab with that shared
@@ -400,6 +403,12 @@
     $("#new-bucket-btn").on("click", () => App.openBucketModal());
     $("#fab").on("click", () => $("#quick-add-input").focus());
     $("#quick-add-help").on("click", () => $("#syntax-modal").modal("show"));
+    // Show/hide subtasks in the task list; the choice sticks across reloads.
+    $("#toggle-subtasks").on("click", async () => {
+      state.showSubtasks = !state.showSubtasks;
+      await DB.setMeta("show_subtasks", state.showSubtasks);
+      App.renderAll();
+    });
 
     // Watching (tasks shared with me): a main-pane view, like the status filters.
     $("#watching-btn").on("click", enterWatching);

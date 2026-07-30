@@ -95,6 +95,10 @@
       return;
     }
     if (!state.search.active) $("#quick-add").show();
+    // The subtask toggle is static markup; keep its pressed state + tooltip in sync.
+    $("#toggle-subtasks")
+      .toggleClass("active", state.showSubtasks)
+      .attr("title", state.showSubtasks ? "Hide subtasks" : "Show subtasks");
 
     const all = await liveTodos();
     const unread = await unreadByTask();
@@ -124,13 +128,29 @@
       const inStatus = (t) => (sf === "all" ? true : t.status === sf);
       const match = (t) => inBucket(t) && inStatus(t);
 
-      // Always render a tree: a matched task nests under its parent if the parent also
-      // matches, otherwise it becomes a root. This keeps the hierarchy in every view.
       const matchedIds = new Set(all.filter(match).map((t) => t.id));
-      roots = all.filter((t) => match(t) && (!t.parent_id || !matchedIds.has(t.parent_id)));
+      if (state.showSubtasks) {
+        // Render a tree with full subtrees: a matched task shows ALL its subtasks,
+        // even ones that don't match the status filter themselves (subtasks often
+        // have a different status than the parent and would otherwise vanish from
+        // filtered views). A task already rendered inside a matched ancestor's
+        // subtree must not also become a root, or it would appear twice.
+        const byId = new Map(all.map((t) => [t.id, t]));
+        const underMatched = (t) => {
+          for (let p = byId.get(t.parent_id); p; p = byId.get(p.parent_id)) {
+            if (matchedIds.has(p.id)) return true;
+          }
+          return false;
+        };
+        roots = all.filter((t) => match(t) && !underMatched(t));
+      } else {
+        // Subtasks toggled off: only matching top-level tasks.
+        roots = all.filter((t) => match(t) && !t.parent_id);
+      }
       opts = {
         tree: true,
-        scopeIds: matchedIds,
+        // null = no scope, show every descendant; empty set = hide them all.
+        scopeIds: state.showSubtasks ? null : new Set(),
         showPill: sf === "all", // statuses are mixed only when not filtered
         showBucket: bf === "all",
       };
