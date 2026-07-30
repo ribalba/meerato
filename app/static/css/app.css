@@ -117,9 +117,9 @@ body {
   color: #fff;
 }
 .rail-search-btn.active:hover { background: #1a6fb5; color: #fff; }
-/* The subtask toggle lights up while subtasks are hidden, so the pruned list is obvious. */
-#toggle-subtasks.active { background: #2185d0; color: #fff; }
-#toggle-subtasks.active:hover { background: #1a6fb5; color: #fff; }
+/* The subtask toggle fades while subtasks are hidden, mirroring the pruned list. */
+#toggle-subtasks.active { opacity: .4; }
+#toggle-subtasks.active:hover { opacity: 1; }
 .rail-search-btn.active::after {
   content: "";
   position: absolute;
@@ -550,7 +550,11 @@ body.resizing { cursor: col-resize; user-select: none; }
   color: #ababab;
   cursor: pointer;
   padding: .15rem;
+  /* .55rem row padding + .4rem + .15rem = 1.1rem: the dots sit on the same
+     column as the right-floated status/All-buckets icons above. */
+  margin-right: .4rem;
 }
+.bucket-menu.ui.dropdown > .ellipsis.icon { margin: 0; }
 .bucket-menu.ui.dropdown:hover { color: #666; }
 .bucket-menu .menu { font-weight: 400; }
 #toggle-archived {

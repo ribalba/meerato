@@ -42,7 +42,8 @@
     const active = !state.watching && state.bucketFilter === b.id;
     return `
       <div class="bucket-row ${active ? "active" : ""} ${b.archived ? "archived" : ""}" data-id="${b.id}">
-        <div class="ui top left pointing dropdown bucket-menu" data-id="${b.id}" title="Bucket actions">
+        <a class="bucket-name bucket-link" data-bucket="${b.id}" title="${esc(b.name)}">${esc(b.name)}</a>
+        <div class="ui top right pointing dropdown bucket-menu" data-id="${b.id}" title="Bucket actions">
           <i class="ellipsis vertical icon"></i>
           <div class="menu">
             <div class="item act-rename"><i class="edit icon"></i> Rename</div>
@@ -50,7 +51,6 @@
             <div class="item act-archive"><i class="archive icon"></i> ${b.archived ? "Unarchive" : "Archive"}</div>
           </div>
         </div>
-        <a class="bucket-name bucket-link" data-bucket="${b.id}" title="${esc(b.name)}">${esc(b.name)}</a>
       </div>`;
   }
 
