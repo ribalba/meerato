@@ -304,6 +304,13 @@ def valid_status(db: DBSession, owner_id: str, value: str) -> str:
     return value
 
 
+def status_exists(db: DBSession, owner_id: str, value: str) -> bool:
+    """Whether ``value`` is usable as a status for ``owner_id``. The non-raising
+    counterpart to :func:`valid_status`, for callers that fall back to a default
+    instead of erroring (e.g. a stored preference naming a since-deleted status)."""
+    return value in STATUS_LABELS or _custom_status(db, owner_id, value) is not None
+
+
 def status_label(db: DBSession, owner_id: str, value: str) -> str:
     """Human-readable label for a status value (built-in or custom). Falls back
     to the raw value if it is unknown (e.g. a since-deleted custom status)."""

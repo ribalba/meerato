@@ -137,3 +137,19 @@ shortcuts can reach an account without a session cookie:
   existing task (applied at local midnight by the background scheduler)
 
 Interactive API docs are at `/docs`.
+
+## Adding tasks from the OS share sheet
+
+The manifest declares a [Web Share Target](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target),
+so on Android Chrome and desktop Chrome/Edge the installed app appears in the system
+share sheet. Shares arrive as a `GET` on `/` carrying `share_title`, `share_text` and
+`share_url`; `app.shell.js` collapses them into one line and drops it into the quick-add
+box for editing rather than saving straight away, so the shorthand still applies.
+
+iOS is the exception: WebKit has never implemented Web Share Target
+([bug 194593](https://bugs.webkit.org/show_bug.cgi?id=194593)), so an installed PWA
+*cannot* register itself as an iPhone share target. Use the **Shortcuts** app instead:
+a shortcut with "Show in Share Sheet" enabled that POSTs to `/api/create?token=…` gives
+the same result, and it stays a first-class share sheet entry. Step-by-step setup, with
+the endpoint URL filled in, is under *API → How you can use this with software →
+iPhone / iPad* in the app.

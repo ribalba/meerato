@@ -25,7 +25,56 @@
     setTimeout(() => el.remove(), 450);
   }
 
+  // ---- Web Share Target ----
+  // The OS hands a shared payload to the installed app as query params on "/"
+  // (see `share_target` in manifest.webmanifest). iOS Safari doesn't implement
+  // the API, so on iPhone the same entry point is driven by a Shortcut instead.
+  // Either way the payload arrives here and lands in the quick-add box.
+  const SHARE_PARAMS = ["share_title", "share_text", "share_url"];
+  const SHARE_KEY = "pending_share";
+
+  // Collapse a shared {title, text, url} into one quick-add line. Apps are
+  // inconsistent about which field they fill (some put the link in `text` and
+  // leave `url` empty), so drop duplicates and only append the URL if it isn't
+  // already in there.
+  function sharedQuickAddText(params) {
+    const parts = [];
+    for (const key of ["share_title", "share_text"]) {
+      const v = (params.get(key) || "").trim();
+      if (v && !parts.includes(v)) parts.push(v);
+    }
+    const url = (params.get("share_url") || "").trim();
+    if (url && !parts.some((p) => p.includes(url))) parts.push(url);
+    // The quick-add box is a single-line input, so flatten any shared newlines.
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  // Stash the payload and strip it from the URL. Signing in reloads to "/", so
+  // without this the shared text would be lost whenever the share arrives on a
+  // signed-out app.
+  function stashSharedText() {
+    const params = new URLSearchParams(location.search);
+    if (!SHARE_PARAMS.some((p) => params.has(p))) return;
+    const text = sharedQuickAddText(params);
+    if (text) sessionStorage.setItem(SHARE_KEY, text);
+    history.replaceState({}, "", "/");
+  }
+
+  // Drop a stashed share into the quick-add box, ready to edit. Deliberately not
+  // auto-submitted: the shorthand (#Bucket, !now, a trailing date) is the point of
+  // sharing into the box, and the user gets a chance to trim a noisy page title.
+  function applySharedText() {
+    const shared = sessionStorage.getItem(SHARE_KEY);
+    if (!shared) return;
+    sessionStorage.removeItem(SHARE_KEY);
+    $("#quick-add-input").val(shared).trigger("focus");
+    toast("Shared text is in the add box. Edit it, then press Enter.");
+  }
+
   async function boot() {
+    // Before the auth check: showLogin() and the post-sign-in reload both discard
+    // location.search, so the payload has to be captured first.
+    stashSharedText();
     if ("serviceWorker" in navigator) {
       // Register after `load` so installing/precaching never competes with the
       // initial navigation and critical resources — registering during boot lets
@@ -194,6 +243,7 @@
         }
       } catch (e) { /* ignore */ }
     }
+    await reconcileNewTaskDefaults();
 
     bindShellEvents();
     setupResizer();
@@ -220,6 +270,9 @@
       if (order.length) state.statusFilter = order[0];
     }
 
+    // Restore the saved subtask-visibility toggle (defaults to shown).
+    state.showSubtasks = (await DB.getMeta("show_subtasks", true)) !== false;
+
     await App.renderAll();
 
     // Deep links: /?watch=<public_token> opens the Watching tab with that shared
@@ -238,6 +291,9 @@
       history.replaceState({}, "", "/");
       enterWatching();
     }
+
+    // Last, so the focused quick-add box isn't stolen by a deep-linked task.
+    applySharedText();
   }
 
   // Drag the gutter to resize the list vs. detail columns; width is remembered.
@@ -342,8 +398,8 @@
       $("#notif-modal").modal("hide");
       toast("Marked all as read");
     });
-    $("#default-bucket").on("change", function () { DB.setMeta("default_bucket", this.value); });
-    $("#default-status").on("change", function () { DB.setMeta("default_status", this.value); });
+    $("#default-bucket").on("change", function () { saveNewTaskDefault("default_bucket", "default_bucket_id", this.value); });
+    $("#default-status").on("change", function () { saveNewTaskDefault("default_status", "default_status", this.value); });
     $("#tz-select").on("change", async function () {
       try {
         const u = await API.patch("/api/auth/me", { timezone: this.value });
@@ -361,6 +417,12 @@
     $("#new-bucket-btn").on("click", () => App.openBucketModal());
     $("#fab").on("click", () => $("#quick-add-input").focus());
     $("#quick-add-help").on("click", () => $("#syntax-modal").modal("show"));
+    // Show/hide subtasks in the task list; the choice sticks across reloads.
+    $("#toggle-subtasks").on("click", async () => {
+      state.showSubtasks = !state.showSubtasks;
+      await DB.setMeta("show_subtasks", state.showSubtasks);
+      App.renderAll();
+    });
 
     // Watching (tasks shared with me): a main-pane view, like the status filters.
     $("#watching-btn").on("click", enterWatching);
@@ -397,6 +459,7 @@
     $("#api-software-btn").on("click", () => $("#api-software-modal").modal("show"));
     $("#api-copy-shell").on("click", () => App.copyText(App.apiShell, "Alias copied"));
     $("#api-copy-alfred").on("click", () => App.copyText(App.apiAlfred, "Script copied"));
+    $("#api-copy-ios").on("click", () => App.copyText(App.apiIos, "Endpoint copied"));
 
     // Permanent quick-add bar (submit with Enter, unless the autocomplete menu
     // is open — then Enter/Tab/arrows drive the menu instead).
@@ -831,6 +894,40 @@
     const buckets = await liveBuckets();
     if (saved && buckets.some((b) => b.id === saved && !b.archived)) return saved;
     return (buckets.find((b) => !b.archived) || buckets[0] || {}).id || null;
+  }
+
+  // Each default is stored twice: in local meta, which the quick-add box reads so
+  // it keeps working offline, and on the user record, which is the only copy the
+  // external API can see (the server has no access to this browser's storage).
+  async function saveNewTaskDefault(metaKey, field, value) {
+    await DB.setMeta(metaKey, value);
+    try {
+      Object.assign(state.user, await API.patch("/api/auth/me", { [field]: value }));
+    } catch (e) {
+      toast(errText(e), "error");
+    }
+  }
+
+  // Reconcile the two copies at sign-in. These settings predate the server-side
+  // ones, so a long-standing user's choice exists only in local meta — push that
+  // up once. Otherwise the server wins, since it is what other devices and the
+  // API read. Nothing is pushed for a user who never picked a default: the
+  // fallbacks above resolve at read time and aren't a stated preference.
+  async function reconcileNewTaskDefaults() {
+    for (const [metaKey, field] of [["default_bucket", "default_bucket_id"], ["default_status", "default_status"]]) {
+      if (state.user[field]) {
+        await DB.setMeta(metaKey, state.user[field]);
+        continue;
+      }
+      const local = await DB.getMeta(metaKey, null);
+      // Sent one field per request so a rejected value (a bucket deleted on
+      // another device) can't take the other one down with it.
+      if (local) {
+        try {
+          Object.assign(state.user, await API.patch("/api/auth/me", { [field]: local }));
+        } catch (e) { /* offline or stale: local meta still drives the app */ }
+      }
+    }
   }
 
   // Wipe the local mirror + per-account state (on logout / account switch).

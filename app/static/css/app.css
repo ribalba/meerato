@@ -62,16 +62,18 @@ body {
   padding: .25rem .25rem .5rem;
 }
 .rail-brand-name { display: inline-flex; align-items: center; }
-.rail-search-btn {
-  margin-left: auto;
+/* Small icon buttons in the brand row (subtask toggle, search). */
+.rail-icon-btn {
   color: #8a8d91;
   cursor: pointer;
   font-size: .95rem;
   padding: .25rem .35rem;
   border-radius: 6px;
 }
-.rail-search-btn:hover { color: #2185d0; background: #f2f2f2; }
-.rail-search-btn .icon { margin: 0; }
+.rail-icon-btn:hover { color: #2185d0; background: #f2f2f2; }
+.rail-icon-btn .icon { margin: 0; }
+/* The first icon opens the right-aligned cluster. */
+#toggle-subtasks { margin-left: auto; }
 
 /* Task search header (toggled open from the logo search icon). */
 #search-bar {
@@ -115,6 +117,9 @@ body {
   color: #fff;
 }
 .rail-search-btn.active:hover { background: #1a6fb5; color: #fff; }
+/* The subtask toggle fades while subtasks are hidden, mirroring the pruned list. */
+#toggle-subtasks.active { opacity: .4; }
+#toggle-subtasks.active:hover { opacity: 1; }
 .rail-search-btn.active::after {
   content: "";
   position: absolute;
@@ -545,7 +550,11 @@ body.resizing { cursor: col-resize; user-select: none; }
   color: #ababab;
   cursor: pointer;
   padding: .15rem;
+  /* .55rem row padding + .4rem + .15rem = 1.1rem: the dots sit on the same
+     column as the right-floated status/All-buckets icons above. */
+  margin-right: .4rem;
 }
+.bucket-menu.ui.dropdown > .ellipsis.icon { margin: 0; }
 .bucket-menu.ui.dropdown:hover { color: #666; }
 .bucket-menu .menu { font-weight: 400; }
 #toggle-archived {

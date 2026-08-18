@@ -33,11 +33,18 @@ class UserOut(BaseModel):
     name: str | None = None
     timezone: str = "UTC"
     api_token: str | None = None
+    # New-task defaults (Settings). Null = no preference set.
+    default_bucket_id: str | None = None
+    default_status: str | None = None
 
 
 class ProfileUpdate(BaseModel):
     name: str | None = None
     timezone: str | None = None
+    # Explicit null clears the preference; omitting the field leaves it alone
+    # (update_me works off exclude_unset, so the two are distinguishable).
+    default_bucket_id: str | None = None
+    default_status: str | None = None
 
 
 # --- Scheduled status changes ---
@@ -93,8 +100,10 @@ class ApiTaskCreate(BaseModel):
 
     title: str = Field(min_length=1)
     text: str = ""
-    bucket_id: str | None = None  # defaults to the user's first bucket
-    status: str = "open"
+    # Both fall back to the owner's "New task defaults" (Settings) when omitted —
+    # GET /api/create reports what those currently resolve to.
+    bucket_id: str | None = None
+    status: str | None = None
     # Watchers to add, on top of any parsed out of the title with "@".
     watchers: list[EmailStr] = Field(default_factory=list)
     # Schedule a status change instead of (or as well as) setting one now. Takes
@@ -235,7 +244,9 @@ class ApiOptionsOut(BaseModel):
 
     statuses: list[ApiStatusOut]
     buckets: list[BucketOut]
+    # Where a POST that omits these lands — the caller's "New task defaults".
     default_bucket_id: str | None = None
+    default_status: str = "open"
 
 
 # --- Events / comments ---

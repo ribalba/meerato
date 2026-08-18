@@ -22,6 +22,7 @@ from ..models import (
     EventType,
     ScheduledStatusChange,
     Todo,
+    TodoStatus,
 )
 from ..quickadd import ParsedTask, local_today, parse_quick_add, status_alias_map
 from ..schemas import (
@@ -42,6 +43,7 @@ from ..services import (
     attach_to_todos,
     move_now_to_backlog_for_schedule,
     record_event,
+    status_exists,
     status_label,
     touch,
     valid_status,
@@ -77,6 +79,29 @@ def _custom_statuses(db: DBSession, owner_id: str):
     )
 
 
+def _default_bucket(buckets, user):
+    """Where a create with no bucket lands: the owner's "New task defaults" bucket
+    from Settings, else their first open one.
+
+    ``buckets`` is ``_open_buckets``, so a preference naming a bucket that has since
+    been archived or deleted simply isn't found and falls through to the fallback.
+    """
+    if user.default_bucket_id:
+        for bucket in buckets:
+            if bucket.id == user.default_bucket_id:
+                return bucket
+    return buckets[0] if buckets else None
+
+
+def _default_status(db: DBSession, user) -> str:
+    """The status a create with no status uses: the owner's Settings default, else
+    Backlog. Checked rather than trusted — a custom status can be deleted after
+    being made the default."""
+    if user.default_status and status_exists(db, user.id, user.default_status):
+        return user.default_status
+    return TodoStatus.open.value
+
+
 def _schedule_change(db: DBSession, user, todo: Todo, on_date, status: str) -> ScheduledStatusChange:
     """Queue a status change for ``todo``, firing at local midnight on ``on_date``."""
     valid_status(db, user.id, status)
@@ -106,8 +131,8 @@ def api_create_options(
     """Discovery for the create endpoint: the statuses and buckets a POST may use.
 
     Lets a script fetch the valid ``status`` and ``bucket_id`` values instead of
-    hard-coding them. ``default_bucket_id`` is the bucket a POST without a
-    ``bucket_id`` would land in.
+    hard-coding them. ``default_bucket_id`` and ``default_status`` are where a POST
+    that omits those fields would land — your "New task defaults" from Settings.
     """
     user = _authenticate(db, token)
 
@@ -121,10 +146,12 @@ def api_create_options(
     ]
 
     buckets = _open_buckets(db, user.id)
+    default_bucket = _default_bucket(buckets, user)
     return ApiOptionsOut(
         statuses=statuses,
         buckets=buckets,
-        default_bucket_id=buckets[0].id if buckets else None,
+        default_bucket_id=default_bucket.id if default_bucket else None,
+        default_status=_default_status(db, user),
     )
 
 
@@ -152,19 +179,20 @@ def api_create_todo(
     else:
         parsed = ParsedTask(title=payload.title.strip())
 
-    # An explicit body field always wins over the parsed one.
-    status = payload.status if "status" in payload.model_fields_set else (parsed.status or payload.status)
+    # An explicit body field always wins over the parsed one; with neither, fall
+    # back to the caller's "New task defaults" from Settings.
+    status = payload.status or parsed.status or _default_status(db, user)
     valid_status(db, user.id, status)
 
     # Pick the target bucket: the one supplied (must be the caller's), else a
-    # parsed #bucket, else their first non-archived bucket.
+    # parsed #bucket, else the Settings default (or first open bucket).
     bucket_id = payload.bucket_id or parsed.bucket_id
     if bucket_id:
         bucket = db.get(Bucket, bucket_id)
         if bucket is None or bucket.deleted or bucket.owner_id != user.id:
             raise HTTPException(status_code=404, detail="Bucket not found")
     else:
-        bucket = buckets[0] if buckets else None
+        bucket = _default_bucket(buckets, user)
         if bucket is None:
             raise HTTPException(status_code=400, detail="No bucket to add the task to")
 
@@ -181,14 +209,23 @@ def api_create_todo(
     db.add(todo)
     record_event(db, todo, EventType.created, body="Created task (API)", actor_email=user.email)
 
+    # ScheduledStatusChange carries a bare FK to todos.id with no ORM relationship
+    # back to Todo, so the unit of work has no dependency edge telling it to insert
+    # the task first: it would order the schedule's INSERT ahead of the task's and
+    # trip the foreign key. Flush the task now so the row exists to point at.
+    db.flush()
+
     # An explicit `schedule` beats a date phrase in the title; a date phrase with
     # no explicit status starts the task in Backlog and moves it to "Now" that day.
     sched_date = payload.schedule.date if payload.schedule else parsed.schedule_date
     sched_status = payload.schedule.status if payload.schedule else "on_list"
     if sched_date:
         _schedule_change(db, user, todo, sched_date, sched_status)
-        if not payload.schedule and "status" not in payload.model_fields_set and not parsed.status:
-            todo.status = "open"
+        # Backlog here overrides the Settings default on purpose, matching the
+        # in-app quick-add: a task queued to become "Now" on a later day would
+        # defeat its own schedule if it started out in "Now" today.
+        if not payload.schedule and payload.status is None and not parsed.status:
+            todo.status = TodoStatus.open.value
 
     watchers = list(parsed.watchers)
     for email in payload.watchers:

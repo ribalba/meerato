@@ -72,6 +72,7 @@
     watchersOpen: false, // detail pane: is the watchers panel expanded
     scheduleOpen: false, // detail pane: is the schedule panel expanded
     showArchived: false, // sidebar: reveal archived buckets
+    showSubtasks: true, // task list: nest subtasks under their (visible) parents
     search: { active: false, parsed: null }, // task search overlay (see parseSearch)
   };
 

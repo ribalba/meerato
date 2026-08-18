@@ -42,7 +42,8 @@
     const active = !state.watching && state.bucketFilter === b.id;
     return `
       <div class="bucket-row ${active ? "active" : ""} ${b.archived ? "archived" : ""}" data-id="${b.id}">
-        <div class="ui top left pointing dropdown bucket-menu" data-id="${b.id}" title="Bucket actions">
+        <a class="bucket-name bucket-link" data-bucket="${b.id}" title="${esc(b.name)}">${esc(b.name)}</a>
+        <div class="ui top right pointing dropdown bucket-menu" data-id="${b.id}" title="Bucket actions">
           <i class="ellipsis vertical icon"></i>
           <div class="menu">
             <div class="item act-rename"><i class="edit icon"></i> Rename</div>
@@ -50,7 +51,6 @@
             <div class="item act-archive"><i class="archive icon"></i> ${b.archived ? "Unarchive" : "Archive"}</div>
           </div>
         </div>
-        <a class="bucket-name bucket-link" data-bucket="${b.id}" title="${esc(b.name)}">${esc(b.name)}</a>
       </div>`;
   }
 
@@ -85,6 +85,11 @@
   // ===================== Task tree =====================
 
   async function renderList(buckets) {
+    // The subtask toggle is static rail markup; keep its lit state (subtasks
+    // hidden) + tooltip in sync even while a panel or the Watching view is open.
+    $("#toggle-subtasks")
+      .toggleClass("active", !state.showSubtasks)
+      .attr("title", state.showSubtasks ? "Hide subtasks" : "Show subtasks");
     // A main-pane panel (Automation / API) is open: it owns the content area,
     // so leave the task-list chrome hidden and don't render tasks underneath.
     if (state.panel) return;
@@ -124,13 +129,29 @@
       const inStatus = (t) => (sf === "all" ? true : t.status === sf);
       const match = (t) => inBucket(t) && inStatus(t);
 
-      // Always render a tree: a matched task nests under its parent if the parent also
-      // matches, otherwise it becomes a root. This keeps the hierarchy in every view.
       const matchedIds = new Set(all.filter(match).map((t) => t.id));
-      roots = all.filter((t) => match(t) && (!t.parent_id || !matchedIds.has(t.parent_id)));
+      if (state.showSubtasks) {
+        // Render a tree with full subtrees: a matched task shows ALL its subtasks,
+        // even ones that don't match the status filter themselves (subtasks often
+        // have a different status than the parent and would otherwise vanish from
+        // filtered views). A task already rendered inside a matched ancestor's
+        // subtree must not also become a root, or it would appear twice.
+        const byId = new Map(all.map((t) => [t.id, t]));
+        const underMatched = (t) => {
+          for (let p = byId.get(t.parent_id); p; p = byId.get(p.parent_id)) {
+            if (matchedIds.has(p.id)) return true;
+          }
+          return false;
+        };
+        roots = all.filter((t) => match(t) && !underMatched(t));
+      } else {
+        // Subtasks toggled off: only matching top-level tasks.
+        roots = all.filter((t) => match(t) && !t.parent_id);
+      }
       opts = {
         tree: true,
-        scopeIds: matchedIds,
+        // null = no scope, show every descendant; empty set = hide them all.
+        scopeIds: state.showSubtasks ? null : new Set(),
         showPill: sf === "all", // statuses are mixed only when not filtered
         showBucket: bf === "all",
       };
