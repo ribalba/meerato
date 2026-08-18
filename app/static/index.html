@@ -721,7 +721,8 @@
 
           <h4 class="ui horizontal divider header"><i class="calendar alternate outline icon"></i> Scheduling status changes</h4>
           <p style="color:#888">To schedule a status change on a task that already exists,
-            POST to <code>/api/schedule</code> with the same token. A task can hold several
+            POST to <code>/api/schedule</code> with the same token. A task currently in
+            <em>Now</em> moves to <em>Backlog</em> immediately. A task can hold several
             pending changes; they apply in date order.</p>
           <pre class="api-curl-block">curl -X POST "…/api/schedule?token=YOUR_TOKEN" \
   -H "Content-Type: application/json" \
@@ -952,6 +953,25 @@
     <div class="actions">
       <div class="ui button" id="notif-clear"><i class="check icon"></i> Mark all as read</div>
       <div class="ui cancel button">Close</div>
+    </div>
+  </div>
+
+  <!-- ===== Changes the server refused (parked sync ops) ===== -->
+  <div class="ui small modal" id="sync-blocked-modal">
+    <div class="header">Changes that can't sync</div>
+    <div class="content">
+      <p>
+        The server refused these changes, so they have been set aside instead of being
+        retried forever. Fix the cause and retry, or discard them — discarding only stops
+        them being sent; what they changed stays on this device until a reload replaces it
+        with the server's copy.
+      </p>
+      <div class="ui relaxed divided list" id="sync-blocked-list"></div>
+    </div>
+    <div class="actions">
+      <div class="ui button" id="sync-blocked-discard">Discard</div>
+      <div class="ui cancel button">Close</div>
+      <div class="ui primary approve button">Retry now</div>
     </div>
   </div>
 

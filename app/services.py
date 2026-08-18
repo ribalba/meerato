@@ -110,6 +110,15 @@ def log_todo_changes(db: DBSession, todo: Todo, before: dict, actor) -> None:
         notify_watchers(db, todo, msg, exclude_email=actor_email)
 
 
+def move_now_to_backlog_for_schedule(db: DBSession, todo: Todo, actor) -> None:
+    """Move a scheduled task out of Now until its pending status change applies."""
+    if todo.status != TodoStatus.on_list.value:
+        return
+    before = snapshot(todo)
+    todo.status = TodoStatus.open.value
+    log_todo_changes(db, todo, before, actor)
+
+
 # --- Watchers ---
 
 

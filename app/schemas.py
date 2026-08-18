@@ -91,7 +91,7 @@ class CustomStatusOut(CustomStatusBase):
 class ApiTaskCreate(BaseModel):
     """Body for the token-authenticated POST /api/create endpoint."""
 
-    title: str = Field(min_length=1, max_length=500)
+    title: str = Field(min_length=1)
     text: str = ""
     bucket_id: str | None = None  # defaults to the user's first bucket
     status: str = "open"
@@ -299,7 +299,7 @@ class WatchedTaskOut(BaseModel):
 
 
 class TodoBase(BaseModel):
-    title: str = Field(min_length=1, max_length=500)
+    title: str = Field(min_length=1)
     text: str = ""
     status: str = "open"
     position: int = 0
@@ -313,7 +313,7 @@ class TodoCreate(TodoBase):
 
 
 class TodoUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=500)
+    title: str | None = Field(default=None, min_length=1)
     text: str | None = None
     status: str | None = None
     position: int | None = None

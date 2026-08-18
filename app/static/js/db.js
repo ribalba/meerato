@@ -50,6 +50,15 @@
     return box;
   }
 
+  // Date.now() keeps the sequence climbing across reloads, where `lastSeq` resets to 0;
+  // the +1 fallback keeps it strictly increasing within a single millisecond.
+  let lastSeq = 0;
+  function nextSeq() {
+    const now = Date.now();
+    lastSeq = now > lastSeq ? now : lastSeq + 1;
+    return lastSeq;
+  }
+
   const DB = {
     put: (store, value) => tx(store, "readwrite", (os) => os.put(value)),
     bulkPut: (store, values) =>
@@ -66,9 +75,14 @@
     },
     setMeta: (key, value) => DB.put("meta", { key, value }),
 
-    // queue helpers
-    enqueue: (mutation) => DB.put("queue", mutation),
-    queued: () => DB.getAll("queue"),
+    // queue helpers. The store is keyed by a random op_id, so getAll() hands back
+    // mutations in key order rather than the order they were made; each row carries
+    // a monotonic `seq` that queued() sorts on, so the server replays a create
+    // before the edits that follow it. Rows queued before `seq` existed sort first,
+    // which is where they belong — they are the oldest.
+    enqueue: (mutation) => DB.put("queue", { ...mutation, seq: nextSeq(), attempts: 0 }),
+    queued: async () =>
+      (await DB.getAll("queue")).sort((a, b) => (a.seq || 0) - (b.seq || 0)),
     dequeue: (op_id) => DB.delete("queue", op_id),
   };
 

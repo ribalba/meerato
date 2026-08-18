@@ -262,16 +262,18 @@
     if (bits.length) toast("Task added — " + bits.join(" · "));
   }
 
-  // Flush the mutation queue and wait until it's empty (the new task has reached
-  // the server). Returns false if it doesn't drain within the timeout.
+  // Flush the mutation queue and wait until it's drained (the new task has reached
+  // the server). Returns false if it doesn't drain within the timeout. Counts only
+  // sendable ops: a parked one is never going out on its own, so waiting on it would
+  // burn the whole timeout and report a server problem that isn't there.
   async function flushAndWait(timeoutMs = 6000) {
     const start = Date.now();
     await Sync.flush();
-    while ((await Sync.pendingCount()) > 0 && Date.now() - start < timeoutMs) {
+    while ((await Sync.readyCount()) > 0 && Date.now() - start < timeoutMs) {
       await new Promise((r) => setTimeout(r, 150));
       await Sync.flush();
     }
-    return (await Sync.pendingCount()) === 0;
+    return (await Sync.readyCount()) === 0;
   }
 
   Object.assign(App, { quickAdd, quickAddPaste });

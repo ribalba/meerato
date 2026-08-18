@@ -31,6 +31,7 @@ from ..services import (
     display_name,
     get_owned_todo,
     log_todo_changes,
+    move_now_to_backlog_for_schedule,
     notify_watchers,
     record_event,
     snapshot,
@@ -241,6 +242,7 @@ def create_schedule(
         body=f"Scheduled status → {status_label(db, user.id, payload.status)} on {payload.date.isoformat()}",
         actor_email=user.email,
     )
+    move_now_to_backlog_for_schedule(db, todo, user)
     touch(todo)
     db.commit()
     db.refresh(sched)

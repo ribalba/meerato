@@ -50,6 +50,8 @@
         .toggleClass("online", on)
         .toggleClass("offline", !on)
         .attr("title", on ? "Online — click to sync" : "Offline — changes will sync when reconnected");
+      // Restores the "server refused N changes" tooltip this just overwrote.
+      updatePendingBadge();
     };
     window.addEventListener("online", upd);
     window.addEventListener("offline", upd);
@@ -316,7 +318,19 @@
       await clearLocalData();
       location.reload();
     });
-    $("#sync-now").on("click", () => Sync.flush().then(() => toast("Synced")));
+    $("#sync-now").on("click", async () => {
+      const r = await Sync.flush();
+      if (r.busy) return toast("Already syncing…");
+      if (!r.ok) return toast("Couldn't reach the server — your changes are still queued.", "error");
+      if (r.parked) return showBlockedSync();
+      if (r.detail) return toast(`Couldn't sync a change: ${r.detail}`, "error");
+      toast(r.synced ? `Synced ${r.synced} change${r.synced === 1 ? "" : "s"}` : "Synced");
+    });
+    $("#sync-blocked-discard").on("click", async () => {
+      await Sync.discardBlocked();
+      $("#sync-blocked-modal").modal("hide");
+      toast("Discarded — the change stays on this device only");
+    });
     $("#settings-btn").on("click", showSettings);
     $("#settings-back").on("click", hideSettings);
     $("#reload-app").on("click", reloadApp);
@@ -446,7 +460,44 @@
 
   async function updatePendingBadge() {
     const n = await Sync.pendingCount();
-    $("#pending-badge").text(n).toggle(n > 0);
+    const parked = await Sync.blockedCount();
+    $("#pending-badge").text(n).toggleClass("red", parked > 0).toggle(n > 0);
+    if (parked) {
+      $("#sync-now").attr(
+        "title",
+        `${parked} change${parked === 1 ? "" : "s"} the server refused — click for details`
+      );
+    }
+  }
+
+  // A short description of a queued mutation, for the parked-changes list.
+  function describeOp(m) {
+    const title = m.data && m.data.title;
+    return `${m.action} ${m.entity}` + (title ? `: “${String(title).slice(0, 120)}”` : "");
+  }
+
+  // Ops the server keeps refusing are parked rather than retried forever. This is
+  // where the user finds out why and decides what happens to them.
+  async function showBlockedSync() {
+    const ops = await Sync.blockedOps();
+    if (!ops.length) return toast("Synced");
+    $("#sync-blocked-list").html(
+      ops
+        .map(
+          (m) =>
+            `<div class="item"><div class="header">${esc(describeOp(m))}</div>` +
+            `<div class="description">${esc(m.last_error || "Rejected by the server.")}</div></div>`
+        )
+        .join("")
+    );
+    $("#sync-blocked-modal")
+      .modal({
+        onApprove: async () => {
+          const r = await Sync.retryBlocked();
+          toast(r.parked ? "Still refused — nothing changed" : "Synced", r.parked ? "error" : "");
+        },
+      })
+      .modal("show");
   }
 
   function setStatusFilter(value) {

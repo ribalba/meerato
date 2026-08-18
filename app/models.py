@@ -97,9 +97,9 @@ class LoginCode(Base):
     the desktop app if the OS has the protocol handler registered, which is not a
     given on Linux. Typing the code into the app window always works.
 
-    Kept in its own table rather than as columns on LoginToken because the deploy
-    story is ``create_all``-only (see database.init_db): a new table appears on an
-    existing database, new columns would not.
+    Kept in its own table rather than as columns on LoginToken because that needed
+    no migration: ``create_all`` makes a new table appear on an existing database,
+    where new columns would have needed an entry in migrations.py.
 
     One live code per email — requesting another replaces it. Only the HMAC of the
     code is stored, and the row is deleted on first successful use or after
@@ -169,7 +169,7 @@ class Todo(Base):
     parent_id: Mapped[str | None] = mapped_column(ForeignKey("todos.id"), index=True)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
 
-    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     text: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(20), default=TodoStatus.open.value, index=True)
     # BigInteger: see Bucket.position — the client orders with `Date.now()`.

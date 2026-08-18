@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import get_settings
+from .migrations import run_migrations
 
 settings = get_settings()
 
@@ -30,7 +31,9 @@ def init_db() -> None:
     # Import models so they are registered on Base before create_all.
     from . import models  # noqa: F401
 
-    # Fresh deploys only: the models define the full schema (including the BigInteger
-    # `position` columns), so create_all() produces everything in one shot. There is no
-    # incremental-migration step because we never carry an older on-disk schema forward.
+    # On a fresh deploy the models define the full schema, so create_all() produces
+    # everything in one shot. On an existing one it only fills in tables that are
+    # missing entirely — anything that *changed* on a table already on disk (a widened
+    # column, say) is handled by the migration list, which runs on every boot.
     Base.metadata.create_all(bind=engine)
+    run_migrations(engine)

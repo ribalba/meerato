@@ -100,6 +100,7 @@ app/
   main.py            app wiring, static + SPA + share routes
   config.py          settings (env-overridable)
   database.py        engine/session, init_db
+  migrations.py      schema changes applied automatically on startup
   models.py          SQLAlchemy models
   schemas.py         Pydantic request/response models
   security.py        magic-link auth + sessions

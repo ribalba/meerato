@@ -14,7 +14,7 @@
  *
  * Bump VERSION whenever the precache list changes to evict old caches.
  */
-const VERSION = "todo-v35";
+const VERSION = "todo-v36";
 
 // Same-origin shell: small and local, so precaching these is fast and safe to
 // block install on.

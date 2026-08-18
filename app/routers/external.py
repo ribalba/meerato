@@ -40,6 +40,7 @@ from ..services import (
     add_watcher as add_watcher_svc,
     attach_to_todo,
     attach_to_todos,
+    move_now_to_backlog_for_schedule,
     record_event,
     status_label,
     touch,
@@ -93,6 +94,7 @@ def _schedule_change(db: DBSession, user, todo: Todo, on_date, status: str) -> S
         body=f"Scheduled status → {status_label(db, user.id, status)} on {on_date.isoformat()} (API)",
         actor_email=user.email,
     )
+    move_now_to_backlog_for_schedule(db, todo, user)
     return sched
 
 
@@ -284,8 +286,9 @@ def api_create_schedule(
 ):
     """Schedule a status change on an existing task.
 
-    Fires at the start of ``date`` in your timezone. A task may hold several
-    pending changes; they apply in date order.
+    Fires at the start of ``date`` in your timezone. A task currently in Now
+    moves to Backlog immediately. A task may hold several pending changes; they
+    apply in date order.
     """
     user = _authenticate(db, token)
     todo = _owned_todo(db, payload.todo_id, user)
