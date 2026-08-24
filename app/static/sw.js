@@ -14,7 +14,7 @@
  *
  * Bump VERSION whenever the precache list changes to evict old caches.
  */
-const VERSION = "todo-v40";
+const VERSION = "todo-v41";
 
 // Query params a share_target navigation arrives with (see manifest.webmanifest).
 const SHARE_PARAMS = ["share_title", "share_text", "share_url"];
