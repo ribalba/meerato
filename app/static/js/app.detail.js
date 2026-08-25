@@ -6,13 +6,25 @@
 
   const App = window.App;
   const {
-    $, esc, state, toast, errText, STATUS, statusOf,
+    $, esc, state, toast, errText, STATUS,
     liveBuckets, liveTodos, asUtc, labelOf, displayActor, fmtDate, EVENT_ICON,
     isValidEmail, initEmailSearch, markCommentsSeen, updateBellBadge,
   } = App;
 
+  // Briefly highlight a button row so a click on a card's status/bucket pill
+  // lands the eye on the row that answers it.
+  function flashPicker(sel) {
+    const $row = $(sel);
+    if (!$row.length) return;
+    $row[0].scrollIntoView({ block: "nearest" });
+    $row.removeClass("flash");
+    void $row[0].offsetWidth; // restart the animation if it is already running
+    $row.addClass("flash");
+    setTimeout(() => $row.removeClass("flash"), 1200);
+  }
+
   // `focus` optionally jumps straight to a control after the pane renders:
-  // 'status' | 'bucket' open that dropdown, 'watchers' | 'schedule' expand that panel.
+  // 'status' | 'bucket' flash that button row, 'watchers' | 'schedule' expand that panel.
   async function openTodo(id, focus) {
     state.currentTodoId = id;
     state.editingDescription = false;
@@ -29,10 +41,11 @@
     // Highlight the open task in the list.
     $("#todo-list .todo-card").removeClass("selected");
     $(`#todo-list .todo-card[data-id="${id}"]`).addClass("selected");
-    // Surface the requested control. Dropdowns are shown after render; the schedule
-    // panel needs its list fetched just like its own toggle does.
-    if (focus === "status") $("#d-status-btn").dropdown("show");
-    else if (focus === "bucket") $("#d-bucket-btn").dropdown("show");
+    // Surface the requested control. The status/bucket rows are always visible, so
+    // just flash them; the schedule panel needs its list fetched just like its own
+    // toggle does.
+    if (focus === "status") flashPicker("#d-status-picker");
+    else if (focus === "bucket") flashPicker("#d-bucket-picker");
     else if (focus === "schedule") loadSchedules(id);
   }
 
@@ -88,8 +101,39 @@
     }
   }
 
+  // Status and bucket as one-click button rows (no dropdown to open first) —
+  // the current value is the highlighted button. Subtasks live in their parent's
+  // bucket, so their bucket row is shown but disabled.
+  function pickerHtml(todo, buckets, bName) {
+    const isSub = !!todo.parent_id;
+    const statusBtns = STATUS.map((o) => {
+      const sel = o.value === todo.status;
+      return `<button class="ui tiny button picker-btn ${sel ? `${o.color} active` : "basic"}"
+              data-value="${o.value}" title="${sel ? "Current status" : `Set status to ${esc(labelOf(o.value))}`}">
+        <i class="${o.icon} icon"></i>${esc(labelOf(o.value))}</button>`;
+    }).join("");
+    const bucketBtns = buckets.map((b) => {
+      const sel = b.id === todo.bucket_id;
+      return `<button class="ui tiny button picker-btn ${sel ? "blue active" : "basic"}${isSub ? " disabled" : ""}"
+              data-value="${b.id}" ${isSub ? "disabled" : ""}
+              title="${isSub ? `Bucket: ${esc(bName)} (inherited from parent task)` : sel ? "Current bucket" : `Move to ${esc(b.name)}`}">
+        <i class="folder${b.archived ? " outline" : ""} icon"></i>${esc(b.name)}</button>`;
+    }).join("");
+
+    return `
+      <div class="detail-picker">
+        <div class="picker-row" id="d-status-picker">
+          <span class="picker-label">Status</span>
+          <div class="picker-btns">${statusBtns}</div>
+        </div>
+        <div class="picker-row" id="d-bucket-picker">
+          <span class="picker-label">Bucket</span>
+          <div class="picker-btns">${bucketBtns || "<span style='color:#aaa'>No buckets yet.</span>"}</div>
+        </div>
+      </div>`;
+  }
+
   function detailHtml(todo, buckets, subtodos, events) {
-    const s = statusOf(todo.status);
     const shareReady = !!todo.public_token;
     const att = todo.attachments || [];
     const watchers = todo.watchers || [];
@@ -100,29 +144,6 @@
     return `
       <div class="detail-top">
         <div class="detail-controls">
-          <div class="ui basic floating dropdown icon button" id="d-status-btn" title="Status: ${labelOf(todo.status)}">
-            <i class="${s.icon} icon"></i>
-            <div class="menu">
-              ${STATUS.map((o) => {
-                const sel = o.value === todo.status;
-                return `<div class="item ${sel ? "active selected" : ""}" data-value="${o.value}">
-                  <i class="arrow right icon" style="visibility:${sel ? "visible" : "hidden"}"></i>
-                  <i class="${o.icon} icon"></i> ${labelOf(o.value)}</div>`;
-              }).join("")}
-            </div>
-          </div>
-          ${todo.parent_id
-            ? `<button class="ui basic disabled icon button" title="Bucket: ${esc(bName)} (inherited from parent task)"><i class="folder icon"></i></button>`
-            : `<div class="ui basic floating dropdown icon button" id="d-bucket-btn" title="Bucket: ${esc(bName)}">
-                <i class="folder icon"></i>
-                <div class="menu">
-                  ${buckets.map((b) => {
-                    const sel = b.id === todo.bucket_id;
-                    return `<div class="item ${sel ? "active selected" : ""}" data-value="${b.id}">
-                      <i class="arrow right icon" style="visibility:${sel ? "visible" : "hidden"}"></i>${esc(b.name)}</div>`;
-                  }).join("")}
-                </div>
-              </div>`}
           <button class="ui basic icon button${watchers.length ? " is-set" : ""}" id="d-watchers-btn"
                   title="Watchers${watchers.length ? ` (${watchers.length})` : ""}">
             <i class="eye icon"></i>
@@ -175,6 +196,7 @@
             </div>
           </div>
         </div>
+        ${pickerHtml(todo, buckets, bName)}
         <input type="text" id="d-title" class="detail-title-input" value="${esc(todo.title)}" />
       </div>
       <input type="file" id="d-file" multiple style="display:none" ${online ? "" : "disabled"} />
@@ -274,25 +296,21 @@
   function initDetail(todo, buckets) {
     const id = todo.id;
 
-    // Status & bucket are button-menus; onChange only fires on user selection
-    // (we render the current value statically, so no spurious initial mutation).
-    // Both changes cascade to every subtask: status keeps a tree in sync, and a
-    // bucket move takes the whole subtree along (subtasks live in the parent's bucket).
-    $("#d-status-btn").dropdown({
-      action: "hide",
-      onChange: async (value) => {
-        if (!value || value === todo.status) return;
-        await Sync.mutate("todo", "update", id, { status: value });
-        await cascadeToSubtasks(id, { status: value });
-      },
+    // Status & bucket are one-click button rows: a click on a button that isn't
+    // already the current value applies it straight away. Both changes cascade to
+    // every subtask: status keeps a tree in sync, and a bucket move takes the whole
+    // subtree along (subtasks live in the parent's bucket).
+    $("#d-status-picker .picker-btn").on("click", async function () {
+      const value = this.dataset.value;
+      if (!value || value === todo.status) return;
+      await Sync.mutate("todo", "update", id, { status: value });
+      await cascadeToSubtasks(id, { status: value });
     });
-    $("#d-bucket-btn").dropdown({
-      action: "hide",
-      onChange: async (value) => {
-        if (!value || value === todo.bucket_id) return;
-        await Sync.mutate("todo", "update", id, { bucket_id: value });
-        await cascadeToSubtasks(id, { bucket_id: value });
-      },
+    $("#d-bucket-picker .picker-btn").on("click", async function () {
+      const value = this.dataset.value;
+      if (!value || value === todo.bucket_id) return;
+      await Sync.mutate("todo", "update", id, { bucket_id: value });
+      await cascadeToSubtasks(id, { bucket_id: value });
     });
 
     // Watchers panel toggle (state persists across re-renders).

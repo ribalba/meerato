@@ -407,6 +407,66 @@ body.resizing { cursor: col-resize; user-select: none; }
 .detail-controls .button.is-set {
   box-shadow: 0 0 0 1px #2185d0 inset !important;
 }
+
+/* Status / bucket as one-click button rows under the action buttons: the value
+   is set in a single click, no dropdown to open first. */
+.detail-picker {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding: .5rem .6rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.picker-row {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  border-radius: 5px;
+}
+.picker-label {
+  flex: 0 0 3.6rem;
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: #999;
+}
+.picker-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  min-width: 0;
+}
+.detail-picker .picker-btn.ui.button {
+  margin: 0;
+  padding: .45em .8em;
+  font-weight: 600;
+}
+.detail-picker .picker-btn.ui.button .icon { opacity: .75; }
+.detail-picker .picker-btn.ui.basic.button {
+  box-shadow: 0 0 0 1px rgba(34, 36, 38, .15) inset;
+  color: #666 !important;
+  background: #fff;
+}
+.detail-picker .picker-btn.ui.basic.button:hover {
+  box-shadow: 0 0 0 1px rgba(34, 36, 38, .35) inset;
+  color: #333 !important;
+}
+.detail-picker .picker-btn.ui.button.disabled { opacity: .5 !important; }
+
+/* Flash the row a card's status/bucket pill points at. */
+.picker-row.flash { animation: picker-flash 1.2s ease-out; }
+@keyframes picker-flash {
+  0%, 55% { background: #e3f0fb; box-shadow: 0 0 0 3px #e3f0fb; }
+  100% { background: transparent; box-shadow: 0 0 0 3px transparent; }
+}
+
+@media (max-width: 480px) {
+  .picker-row { flex-direction: column; align-items: stretch; gap: .25rem; }
+  .picker-label { flex: none; }
+}
 #d-timeline.ui.feed .date { color: #999; }
 
 /* Connected activity feed: circular icon badges joined by a vertical line. */
