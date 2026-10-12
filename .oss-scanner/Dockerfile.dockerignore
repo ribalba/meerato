@@ -1,0 +1,15 @@
+# BuildKit uses this instead of the root .dockerignore when building
+# .oss-scanner/Dockerfile. It differs only in keeping README.md and AGENTS.md, which
+# the scanner should be able to read inside the image.
+.venv
+__pycache__
+*.pyc
+.ruff_cache
+todo.db
+todo.db-journal
+uploads
+.git
+.env
+.env.agent
+electron/node_modules
+electron/dist
