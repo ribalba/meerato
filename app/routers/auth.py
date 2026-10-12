@@ -1,12 +1,14 @@
+from html import escape
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session as DBSession
 
 from ..config import get_settings
 from ..database import get_db
 from ..emailer import send_login_link
+from ..pages import html_page
 from ..schemas import LoginRequest, ProfileUpdate, UserOut, VerifyCodeRequest
 from ..services import get_owned_bucket, valid_status
 from ..security import (
@@ -20,6 +22,7 @@ from ..security import (
     enforce_verify_rate,
     get_current_user,
     new_api_token,
+    peek_login_token,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -74,16 +77,56 @@ def verify_login_code(
     return {"ok": True, "redirect": "/"}
 
 
-@router.get("/callback")
-def login_callback(token: str, db: DBSession = Depends(get_db)) -> Response:
+def _link_expired_page() -> HTMLResponse:
+    return html_page(
+        "Link expired",
+        "<h1>This sign-in link no longer works</h1>"
+        "<p>It has expired or was already used. "
+        '<a href="/">Request a new one</a> to sign in.</p>',
+        status_code=400,
+    )
+
+
+@router.get("/callback", response_class=HTMLResponse)
+def login_callback_confirm(token: str, db: DBSession = Depends(get_db)) -> HTMLResponse:
+    """Landing page of the emailed magic link. It only asks for a click.
+
+    Links are single use, and mail clients or link scanners often fetch them before
+    the user does. So the GET leaves the token alone and the button POSTs it to
+    ``login_callback``, which spends it.
+    """
+    lt = peek_login_token(db, token)
+    if lt is None:
+        return _link_expired_page()
+    resp = html_page(
+        "Sign in",
+        f"""
+        <h1>Sign in to meerato</h1>
+        <p>Continue as <span class="task">{escape(lt.email)}</span>.</p>
+        <form method="post" action="/api/auth/callback">
+          <input type="hidden" name="token" value="{escape(lt.token)}" />
+          <button type="submit" autofocus>Sign in</button>
+        </form>
+        """,
+    )
+    # The page carries a live token, keep it out of caches.
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@router.post("/callback")
+def login_callback(token: str = Form(...), db: DBSession = Depends(get_db)) -> Response:
     """Consume a magic link, establish a session cookie, and redirect into the app."""
-    user, redirect_todo_id = consume_login_token(db, token)
+    try:
+        user, redirect_todo_id = consume_login_token(db, token)
+    except HTTPException:
+        return _link_expired_page()
     session_token = create_session(db, user)
 
     target = "/"
     if redirect_todo_id:
         target = f"/?todo={redirect_todo_id}"
-    resp = RedirectResponse(url=target, status_code=302)
+    resp = RedirectResponse(url=target, status_code=303)
     _set_session_cookie(resp, session_token)
     return resp
 

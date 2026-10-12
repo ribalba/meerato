@@ -72,10 +72,29 @@ def create_login_token(db: DBSession, email: str, redirect_todo_id: str | None =
     return token
 
 
-def consume_login_token(db: DBSession, token: str) -> tuple[User, str | None]:
+def peek_login_token(db: DBSession, token: str) -> LoginToken | None:
+    """Return the magic-link token if it can still sign in, without spending it.
+
+    Opening the link only shows a confirmation page built from this. Mail clients and
+    link scanners fetch links before the user does, so a GET must never burn it.
+    """
     lt = db.query(LoginToken).filter(LoginToken.token == token).one_or_none()
-    if lt is None or lt.expires_at < utcnow():
+    if lt is None or lt.used or lt.expires_at < utcnow():
+        return None
+    return lt
+
+
+def consume_login_token(db: DBSession, token: str) -> tuple[User, str | None]:
+    """Spend a magic-link token and return its user and the todo to open, if any.
+
+    Single use, so a link that leaks (forwarded mail, browser history, proxy logs)
+    cannot sign anyone in after the owner has used it. The row is locked for the
+    check-and-mark so two concurrent submits cannot both get a session.
+    """
+    lt = db.query(LoginToken).filter(LoginToken.token == token).with_for_update().one_or_none()
+    if lt is None or lt.used or lt.expires_at < utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired login link")
+    lt.used = True
     user = get_or_create_user(db, lt.email)
     db.commit()
     return user, lt.redirect_todo_id

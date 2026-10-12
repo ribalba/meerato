@@ -113,7 +113,8 @@ app/
 ## API tour
 
 - `POST /api/auth/login` `{email}` → emails a magic link
-- `GET  /api/auth/callback?token=…` → sets session cookie, redirects into the app
+- `GET  /api/auth/callback?token=…` → confirmation page (so link prefetchers can't spend the link)
+- `POST /api/auth/callback` `token=…` (form) → spends the single-use link, sets session cookie, redirects into the app
 - `GET/POST/PATCH/DELETE /api/buckets[/{id}]`
 - `GET/POST/PATCH/DELETE /api/todos[/{id}]` (+ `?bucket_id=`, `?status=`)
 - `GET /api/todos/{id}/events`, `POST /api/todos/{id}/comments`
